@@ -1,0 +1,124 @@
+.quiz-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  margin-top: 20px;
+  background-color: #f9f9f9; /* เพิ่มพื้นหลังสีอ่อน */
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1); /* เพิ่มเงา */
+}
+
+.quiz-title {
+  font-size: 28px; /* ปรับขนาดให้ใหญ่ขึ้น */
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: #333; /* เพิ่มสีตัวอักษรให้ดูสว่างขึ้น */
+}
+
+.quiz-question {
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 20px;
+  color: #555; /* เปลี่ยนสีตัวอักษรให้ดูสว่าง */
+}
+
+.quiz-options {
+  display: flex;
+  justify-content: center;
+  flex-direction: column; /* ให้คำตอบเป็นแนวตั้ง */
+  gap: 10px; /* เว้นระยะห่างระหว่างตัวเลือก */
+  width: 100%;
+  max-width: 400px; /* จำกัดความกว้างเพื่อให้สวยงาม */
+}
+
+.quiz-options label {
+  display: flex;
+  align-items: center;
+  font-size: 18px; /* ขนาดตัวอักษรใหญ่ขึ้น */
+  background-color: #fff;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.quiz-options label:hover {
+  background-color: #e0f7fa; /* เพิ่มเอฟเฟกต์เมื่อ hover */
+}
+
+.quiz-options input[type="radio"] {
+  margin-right: 10px;
+}
+
+.quiz-submit-button {
+  padding: 12px 24px;
+  background-color: #28a745;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease; /* เพิ่มแอนิเมชัน */
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* เพิ่มเงาปุ่ม */
+}
+
+.quiz-submit-button:hover {
+  background-color: #218838;
+  transform: translateY(-2px); /* ขยับขึ้นเล็กน้อยเมื่อ hover */
+}
+
+.quiz-submit-button:active {
+  transform: translateY(2px); /* ขยับลงเล็กน้อยเมื่อคลิก */
+}
+
+.result-container {
+  text-align: center;
+  background-color: #fff;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.result-container h2 {
+  font-size: 28px;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.result-container p {
+  font-size: 18px;
+  color: #555;
+}
+
+.result-container ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.result-container li {
+  font-size: 18px;
+  color: #d32f2f;
+  margin-bottom: 10px;
+}
+
+/* แอนิเมชันคำถาม */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.quiz-question,
+.quiz-options {
+  animation: fadeIn 0.5s ease; /* ใช้แอนิเมชันในการแสดงคำถาม */
+}

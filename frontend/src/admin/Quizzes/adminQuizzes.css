@@ -1,0 +1,97 @@
+.admin-courses .content-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 0px; /* ลดช่องว่างระหว่างคอนเทนเนอร์ */
+}
+
+.admin-courses .existing-quizzes, 
+.admin-courses .add-course {
+  flex: 1; /* ทำให้ทั้งสองคอนเทนเนอร์มีความกว้างเท่ากัน */
+  background-color: transparent; /* เปลี่ยนพื้นหลังเป็นโปร่งใส */
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: none; /* ลบเงาของกล่อง */
+}
+
+.admin-courses .course-form {
+  background-color: #fff; /* ทำให้ฟอร์ม Add Quiz เป็นสีขาว */
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: none; /* ลบเงาของฟอร์ม */
+  text-align: center;
+  width: 100%; /* ใช้เต็มความกว้าง */
+}
+
+.admin-courses .course-form h2 {
+  font-size: 24px;
+  color: #04a141;
+  margin-bottom: 15px;
+}
+
+.admin-courses .course-form form {
+  text-align: left;
+}
+
+.admin-courses .course-form form label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 15px;
+  color: #333;
+}
+
+.admin-courses .course-form form input,
+.admin-courses .course-form form select {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.existing-quizzes ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.existing-quizzes li {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  background-color: #fff; /* ให้พื้นหลังของแต่ละ quiz เป็นสีขาว */
+}
+
+.existing-quizzes button {
+  background-color: #ff4d4d;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  margin-right: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.existing-quizzes button:hover {
+  background-color: #d93636;
+}
+
+.common-btn {
+  background-color: #04a141;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.common-btn:disabled {
+  background-color: #aaa;
+}
+
+.common-btn:hover:not(:disabled) {
+  background-color: #038f32;
+}
