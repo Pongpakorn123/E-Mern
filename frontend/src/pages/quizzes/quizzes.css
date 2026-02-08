@@ -1,0 +1,62 @@
+/* ปรับการแสดงผลของ container */
+/* ปรับการแสดงผลของ container */
+.quizzes-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 80vh; /* ให้แน่ใจว่า container ครอบคลุมพื้นที่แนวตั้ง */
+  padding: 20px;
+}
+
+/* ปรับการจัดวางการ์ดในรูปแบบ grid หรือ flexbox */
+.quizzes-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center; /* จัดให้อยู่ตรงกลางแนวนอน */
+  gap: 20px;
+}
+
+/* การ์ดข้อสอบ */
+.quiz-card {
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  width: 300px;
+  text-align: center;
+  transition: transform 0.3s ease-in-out;
+}
+
+.quiz-card:hover {
+  transform: translateY(-5px);
+}
+
+/* สไตล์สำหรับหัวข้อและเนื้อหาของข้อสอบ */
+.quiz-card h3 {
+  font-size: 1.5rem;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.quiz-card p {
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+  color: #666;
+}
+
+/* ปุ่ม Get Started */
+.quiz-button {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease-in-out;
+}
+
+.quiz-button:hover {
+  background-color: #218838;
+}
