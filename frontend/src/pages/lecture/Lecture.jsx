@@ -8,338 +8,282 @@ import toast from "react-hot-toast";
 import { TiTick } from "react-icons/ti";
 
 const Lecture = ({ user }) => {
+  const { id: courseId } = useParams();
+  const navigate = useNavigate();
+  const videoRef = useRef(null);
+
   const [lectures, setLectures] = useState([]);
-  const [lecture, setLecture] = useState([]);
+  const [lecture, setLecture] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [lecLoading, setLecLoading] = useState(false);
+
   const [show, setShow] = useState(false);
-  const params = useParams();
-  const navigate = useNavigate();
+  const [btnLoading, setBtnLoading] = useState(false);
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [video, setVideo] = useState("");
+  const [video, setVideo] = useState(null);
   const [videoPrev, setVideoPrev] = useState("");
-  const [btnLoading, setBtnLoading] = useState(false);
-  const videoRef = useRef(null);
-  const [maxTime, setMaxTime] = useState(0); // Keep track of the maximum time watched
 
-  if (user && user.role === "admin" && user.user && Array.isArray(user.user) && user.user.includes(params.id))
-    return navigate("/");
+  const [completed, setCompleted] = useState(0);
+  const [completedLec, setCompletedLec] = useState(0);
+  const [lectLength, setLectLength] = useState(0);
+  const [progress, setProgress] = useState([]);
 
-  async function fetchLectures() {
-    try {
-      const { data } = await axios.get(`${server}/api/lectures/${params.id}`, {
-        headers: {
-          token: localStorage.getItem("token"),
-        },
-      });
-      setLectures(data.lectures);
-      setLoading(false);
-    } catch (error) {
-      console.log(error);
-      setLoading(false);
-    }
+  const [maxTime, setMaxTime] = useState(0);
+
+  // 🔐 Admin protection
+  if (
+    user &&
+    user.role === "admin" &&
+    Array.isArray(user.user) &&
+    user.user.includes(courseId)
+  ) {
+    navigate("/");
   }
 
-  async function fetchLecture(id) {
-    setLecLoading(true);
+  // ================= FETCH =================
+
+  const fetchLectures = async () => {
+    if (!courseId) return;
+
     try {
-      const { data } = await axios.get(`${server}/api/lecture/${id}`, {
-        headers: {
-          token: localStorage.getItem("token"),
-        },
-      });
-      setLecture(data.lecture);
-      setLecLoading(false);
-    } catch (error) {
-      console.log(error);
-      setLecLoading(false);
+      const { data } = await axios.get(
+        `${server}/api/lectures/${courseId}`,
+        {
+          headers: { token: localStorage.getItem("token") },
+        }
+      );
+      setLectures(data.lectures || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-  }
-
-  const changeVideoHandler = (e) => {
-    const file = e.target.files[0];
-    const reader = new FileReader();
-
-    reader.readAsDataURL(file);
-
-    reader.onloadend = () => {
-      setVideoPrev(reader.result);
-      setVideo(file);
-    };
   };
 
-  const submitHandler = async (e) => {
-    setBtnLoading(true);
-    e.preventDefault();
-    const myForm = new FormData();
+  const fetchLecture = async (lectureId) => {
+    if (!lectureId) return;
 
-    myForm.append("title", title);
-    myForm.append("description", description);
-    myForm.append("file", video);
+    setLecLoading(true);
+    try {
+      const { data } = await axios.get(
+        `${server}/api/lecture/${lectureId}`,
+        {
+          headers: { token: localStorage.getItem("token") },
+        }
+      );
+      setLecture(data.lecture);
+      setMaxTime(0);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLecLoading(false);
+    }
+  };
+
+  const fetchProgress = async () => {
+    if (!courseId) return;
+
+    try {
+      const { data } = await axios.get(
+        `${server}/api/user/progress?course=${courseId}`,
+        {
+          headers: { token: localStorage.getItem("token") },
+        }
+      );
+
+      setCompleted(data.courseProgressPercentage || 0);
+      setCompletedLec(data.completedLectures || 0);
+      setLectLength(data.allLectures || 0);
+      setProgress(data.progress || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // ================= ADD / DELETE =================
+
+  const submitHandler = async (e) => {
+    e.preventDefault();
+    if (!video) return toast.error("Please select a video");
+
+    setBtnLoading(true);
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("description", description);
+    formData.append("file", video);
 
     try {
       const { data } = await axios.post(
-        `${server}/api/course/${params.id}`,
-        myForm,
-        {
-          headers: {
-            token: localStorage.getItem("token"),
-          },
-        }
+        `${server}/api/course/${courseId}`,
+        formData,
+        { headers: { token: localStorage.getItem("token") } }
       );
 
       toast.success(data.message);
-      setBtnLoading(false);
       setShow(false);
-      fetchLectures();
       setTitle("");
       setDescription("");
-      setVideo("");
+      setVideo(null);
       setVideoPrev("");
-    } catch (error) {
-      toast.error(error.response.data.message);
+      fetchLectures();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Something went wrong");
+    } finally {
       setBtnLoading(false);
     }
   };
 
-  const deleteHandler = async (id) => {
-    if (confirm("Are you sure you want to delete this lecture")) {
-      try {
-        const { data } = await axios.delete(`${server}/api/lecture/${id}`, {
-          headers: {
-            token: localStorage.getItem("token"),
-          },
-        });
+  const deleteHandler = async (lectureId) => {
+    if (!confirm("Delete this lecture?")) return;
 
-        toast.success(data.message);
-        fetchLectures();
-      } catch (error) {
-        toast.error(error.response.data.message);
-      }
+    try {
+      const { data } = await axios.delete(
+        `${server}/api/lecture/${lectureId}`,
+        { headers: { token: localStorage.getItem("token") } }
+      );
+      toast.success(data.message);
+      fetchLectures();
+    } catch (err) {
+      toast.error(err.response?.data?.message);
     }
   };
 
-  const [completed, setCompleted] = useState("");
-  const [completedLec, setCompletedLec] = useState("");
-  const [lectLength, setLectLength] = useState("");
-  const [progress, setProgress] = useState([]);
+  // ================= PROGRESS =================
 
-  async function fetchProgress() {
+  const addProgress = async (lectureId) => {
+    if (!lectureId || !courseId) return;
+
     try {
-      const { data } = await axios.get(
-        `${server}/api/user/progress?course=${params.id}`,
-        {
-          headers: {
-            token: localStorage.getItem("token"),
-          },
-        }
-      );
-
-      setCompleted(data.courseProgressPercentage);
-      setCompletedLec(data.completedLectures);
-      setLectLength(data.allLectures);
-      setProgress(data.progress);
-    } catch (error) {
-      console.log(error);
-    }
-  }
-
-  const addProgress = async (id) => {
-    try {
-      const { data } = await axios.post(
-        `${server}/api/user/progress?course=${params.id}&lectureId=${id}`,
+      await axios.post(
+        `${server}/api/user/progress?course=${courseId}&lectureId=${lectureId}`,
         {},
-        {
-          headers: {
-            token: localStorage.getItem("token"),
-          },
-        }
+        { headers: { token: localStorage.getItem("token") } }
       );
-      console.log(data.message);
       fetchProgress();
-    } catch (error) {
-      console.log(error);
+    } catch (err) {
+      console.error(err);
     }
   };
+
+  // ================= VIDEO CONTROL =================
 
   const handleTimeUpdate = () => {
-    const currentTime = videoRef.current.currentTime;
+    const current = videoRef.current?.currentTime || 0;
+    if (current > maxTime) setMaxTime(current);
+  };
 
-    // Update the maxTime if the user watches past the current maxTime
-    if (currentTime > maxTime) {
-      setMaxTime(currentTime);
+  const handleSeeking = () => {
+    if (videoRef.current.currentTime > maxTime) {
+      videoRef.current.currentTime = maxTime;
     }
   };
 
-  const handleSeeking = (e) => {
-    const currentTime = videoRef.current.currentTime;
-
-    // Prevent seeking forward, but allow rewinding
-    if (currentTime > maxTime) {
-      e.preventDefault(); // Prevent forward seeking
-      videoRef.current.currentTime = maxTime; // Lock the video at maxTime
-    }
-  };
-
-  const handleSeeked = () => {
-    const currentTime = videoRef.current.currentTime;
-
-    if (currentTime > maxTime) {
-      videoRef.current.currentTime = maxTime; // Lock the video at maxTime
-    }
-  };
+  // ================= EFFECT =================
 
   useEffect(() => {
     fetchLectures();
     fetchProgress();
+  }, [courseId]);
 
-    const interval = setInterval(() => {
-      const currentTime = videoRef.current ? videoRef.current.currentTime : 0;
-      if (currentTime > maxTime) {
-        videoRef.current.currentTime = maxTime; // Lock the video at maxTime
-      }
-    }, 1000); // Check every 1 second
+  // ================= RENDER =================
 
-    return () => clearInterval(interval);
-  }, [maxTime]);
+  if (loading) return <Loading />;
 
   return (
     <>
-      {loading ? (
-        <Loading />
-      ) : (
-        <>
-          <div className="progress">
-            Lecture completed - {completedLec} out of {lectLength} <br />
-            <progress value={completed} max={100}></progress> {Number(completed).toFixed(2)} %
-          </div>
-          <div className="lecture-page">
-            <div className="left">
-              {lecLoading ? (
-                <Loading />
-              ) : (
-                <>
-                  {lecture.video ? (
-                    <>
-                      <video
-                        ref={videoRef}
-                        src={`${server}/${lecture.video}`}
-                        width={"100%"}
-                        controls
-                        controlsList="nodownload noremoteplayback"
-                        disablePictureInPicture
-                        autoPlay
-                        onEnded={() => addProgress(lecture._id)}
-                        onTimeUpdate={handleTimeUpdate} // Update time
-                        onSeeking={handleSeeking} // Prevent forward seeking
-                        onSeeked={handleSeeked} // Check when seeking ends
-                      ></video>
-                      <h1>{lecture.title}</h1>
-                      <h3>{lecture.description}</h3>
-                    </>
-                  ) : (
-                    <h1>Please Select a Lecture</h1>
+      <div className="progress">
+        Lecture completed - {completedLec} / {lectLength}
+        <br />
+        <progress value={completed} max={100}></progress>{" "}
+        {Number(completed).toFixed(2)} %
+      </div>
+
+      <div className="lecture-page">
+        {/* LEFT */}
+        <div className="left">
+          {lecLoading ? (
+            <Loading />
+          ) : lecture?.video ? (
+            <>
+              <video
+                ref={videoRef}
+                src={`${server}/${lecture.video}`}
+                width="100%"
+                controls
+                autoPlay
+                onEnded={() => addProgress(lecture._id)}
+                onTimeUpdate={handleTimeUpdate}
+                onSeeking={handleSeeking}
+                controlsList="nodownload noremoteplayback"
+                disablePictureInPicture
+              />
+              <h1>{lecture.title}</h1>
+              <h3>{lecture.description}</h3>
+            </>
+          ) : (
+            <h1>Please select a lecture</h1>
+          )}
+        </div>
+
+        {/* RIGHT */}
+        <div className="right">
+          {user?.role === "admin" && (
+            <button className="common-btn" onClick={() => setShow(!show)}>
+              {show ? "Close" : "Add Lecture +"}
+            </button>
+          )}
+
+          {show && (
+            <form className="lecture-form" onSubmit={submitHandler}>
+              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" required />
+              <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" required />
+              <input
+                type="file"
+                onChange={(e) => {
+                  setVideo(e.target.files[0]);
+                  setVideoPrev(URL.createObjectURL(e.target.files[0]));
+                }}
+                required
+              />
+              {videoPrev && <video src={videoPrev} width={250} controls />}
+              <button disabled={btnLoading} className="common-btn">
+                {btnLoading ? "Uploading..." : "Add"}
+              </button>
+            </form>
+          )}
+
+          {lectures.length > 0 ? (
+            lectures.map((lec, i) => (
+              <div key={lec._id}>
+                <div
+                  className={`lecture-number ${lecture?._id === lec._id ? "active" : ""}`}
+                  onClick={() => fetchLecture(lec._id)}
+                >
+                  {i + 1}. {lec.title}
+                  {progress?.[0]?.completedLectures?.includes(lec._id) && (
+                    <TiTick style={{ color: "green" }} />
                   )}
-                </>
-              )}
-            </div>
-            <div className="right">
-              {user && user.role === "admin" && (
-                <button className="common-btn" onClick={() => setShow(!show)}>
-                  {show ? "Close" : "Add Lecture +"}
-                </button>
-              )}
-
-              {show && (
-                <div className="lecture-form">
-                  <h2>Add Lecture</h2>
-                  <form onSubmit={submitHandler}>
-                    <label htmlFor="text">Title</label>
-                    <input
-                      type="text"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      required
-                    />
-
-                    <label htmlFor="text">Description</label>
-                    <input
-                      type="text"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      required
-                    />
-
-                    <input
-                      type="file"
-                      placeholder="choose video"
-                      onChange={changeVideoHandler}
-                      required
-                    />
-
-                    {videoPrev && (
-                      <video
-                        src={videoPrev}
-                        alt=""
-                        width={300}
-                        controls
-                      ></video>
-                    )}
-
-                    <button
-                      disabled={btnLoading}
-                      type="submit"
-                      className="common-btn"
-                    >
-                      {btnLoading ? "Please Wait..." : "Add"}
-                    </button>
-                  </form>
                 </div>
-              )}
 
-              {lectures && lectures.length > 0 ? (
-                lectures.map((e, i) => (
-                  <React.Fragment key={i}>
-                    <div
-                      onClick={() => fetchLecture(e._id)}
-                      className={`lecture-number ${
-                        lecture._id === e._id && "active"
-                      }`}
-                    >
-                      {i + 1}. {e.title}{" "}
-                      {progress[0] &&
-                        progress[0].completedLectures.includes(e._id) && (
-                          <span
-                            style={{
-                              background: "red",
-                              padding: "2px",
-                              borderRadius: "6px",
-                              color: "greenyellow",
-                            }}
-                          >
-                            <TiTick />
-                          </span>
-                        )}
-                    </div>
-                    {user && user.role === "admin" && (
-                      <button
-                        className="common-btn"
-                        style={{ background: "red" }}
-                        onClick={() => deleteHandler(e._id)}
-                      >
-                        Delete {e.title}
-                      </button>
-                    )}
-                  </React.Fragment>
-                ))
-              ) : (
-                <p>No Lectures Yet!</p>
-              )}
-            </div>
-          </div>
-        </>
-      )}
+                {user?.role === "admin" && (
+                  <button
+                    className="common-btn"
+                    style={{ background: "red" }}
+                    onClick={() => deleteHandler(lec._id)}
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            ))
+          ) : (
+            <p>No Lectures Yet</p>
+          )}
+        </div>
+      </div>
     </>
   );
 };

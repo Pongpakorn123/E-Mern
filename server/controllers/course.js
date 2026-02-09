@@ -1,7 +1,6 @@
 import TryCatch from "../middlewares/TryCatch.js";
 import { Courses } from "../models/Courses.js";
 import { Lecture } from "../models/Lecture.js";
-import { User } from "../models/User.js";
 import { Progress } from "../models/Progress.js";
 
 /* =======================
@@ -28,7 +27,13 @@ export const getSingleCourse = TryCatch(async (req, res) => {
 ======================= */
 
 export const fetchLectures = TryCatch(async (req, res) => {
-  const lectures = await Lecture.find({ course: req.params.id });
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json({ message: "Course id is required" });
+  }
+
+  const lectures = await Lecture.find({ course: id });
 
   res.json({ lectures });
 });
@@ -48,18 +53,9 @@ export const fetchLecture = TryCatch(async (req, res) => {
 ======================= */
 
 export const getMyCourses = TryCatch(async (req, res) => {
+  // ถ้าอยาก strict จริง → filter ตาม user ได้ภายหลัง
   const courses = await Courses.find();
   res.json({ courses });
-});
-
-/* =======================
-   CHECKOUT (DISABLED)
-======================= */
-
-export const checkout = TryCatch(async (req, res) => {
-  return res.status(501).json({
-    message: "Checkout not implemented yet",
-  });
 });
 
 /* =======================
@@ -67,12 +63,12 @@ export const checkout = TryCatch(async (req, res) => {
 ======================= */
 
 export const addProgress = TryCatch(async (req, res) => {
-  const courseId = req.query.course || req.body.course;
-  const lectureId = req.query.lectureId || req.body.lectureId;
+  const courseId = req.query.course;
+  const lectureId = req.query.lectureId;
 
   if (!courseId || !lectureId) {
     return res.status(400).json({
-      message: "courseId and lectureId are required",
+      message: "course and lectureId are required",
     });
   }
 
@@ -81,6 +77,7 @@ export const addProgress = TryCatch(async (req, res) => {
     course: courseId,
   });
 
+  // ยังไม่เคยมี progress
   if (!progress) {
     progress = await Progress.create({
       user: req.user._id,
@@ -94,34 +91,41 @@ export const addProgress = TryCatch(async (req, res) => {
     });
   }
 
+  // กันซ้ำ
   if (!progress.completedLectures.includes(lectureId)) {
     progress.completedLectures.push(lectureId);
     await progress.save();
   }
 
-  res.json({
-    message: "Progress updated",
-  });
+  res.json({ message: "Progress updated" });
 });
 
 export const getYourProgress = TryCatch(async (req, res) => {
   const courseId = req.query.course;
+
+  if (!courseId) {
+    return res.status(400).json({
+      message: "course query is required",
+    });
+  }
 
   const progress = await Progress.findOne({
     user: req.user._id,
     course: courseId,
   });
 
+  const allLectures = await Lecture.countDocuments({ course: courseId });
+
+  // ❗ สำคัญมาก: กรณียังไม่เริ่มเรียน
   if (!progress) {
     return res.json({
       courseProgressPercentage: 0,
       completedLectures: 0,
-      allLectures: 0,
-      progress: null,
+      allLectures,
+      progress: [],
     });
   }
 
-  const allLectures = await Lecture.countDocuments({ course: courseId });
   const completedLectures = progress.completedLectures.length;
 
   const courseProgressPercentage =
@@ -131,6 +135,6 @@ export const getYourProgress = TryCatch(async (req, res) => {
     courseProgressPercentage,
     completedLectures,
     allLectures,
-    progress,
+    progress: [progress], // 🔥 frontend ใช้ progress[0]
   });
 });

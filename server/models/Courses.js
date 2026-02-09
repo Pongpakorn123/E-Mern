@@ -5,31 +5,37 @@ const schema = new mongoose.Schema({
     type: String,
     required: true,
   },
+
   description: {
     type: String,
     required: true,
   },
 
   image: {
-    type: String,
+    type: String, // cloudinary secure_url
     required: true,
   },
-  // Date: {
-  //   type: Number,
-  //   required: true,
-  // },
+
+  imagePublicId: {
+    type: String, // 🔥 สำคัญมาก สำหรับลบรูป
+    required: true,
+  },
+
   duration: {
     type: Number,
     required: true,
   },
+
   category: {
     type: String,
     required: true,
   },
+
   createdBy: {
     type: String,
     required: true,
   },
+
   createdAt: {
     type: Date,
     default: Date.now,
@@ -37,4 +43,3 @@ const schema = new mongoose.Schema({
 });
 
 export const Courses = mongoose.model("Courses", schema);
-
