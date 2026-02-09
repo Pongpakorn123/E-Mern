@@ -1,109 +1,112 @@
-import Quiz from '../models/Quiz.js';
-import QuizUser from '../models/QuizUser.js';
+import Quiz from "../models/Quiz.js";
+import QuizUser from "../models/QuizUser.js";
+import TryCatch from "../middlewares/TryCatch.js";
 
-// ฟังก์ชันสำหรับดึงผลสอบ
-export const getUserResults = async (req, res) => {
-  const userId = req.query.userId || req.user.id;
+/* =========================
+   GET USER QUIZ RESULTS
+========================= */
+export const getUserResults = TryCatch(async (req, res) => {
+  const userId = req.user._id;
 
-  try {
-    const results = await QuizUser.findOne({ userId }).select('quizResults');
-    if (!results || results.quizResults.length === 0) {
-      return res.status(404).json({ message: "No quiz results found for this user." });
-    }
-    res.status(200).json({ quizResults: results.quizResults });
-  } catch (error) {
-    console.error("Error fetching quiz results:", error);
-    res.status(500).json({ message: "Server error" });
+  const results = await QuizUser.findOne({ userId }).select("quizResults");
+
+  if (!results || results.quizResults.length === 0) {
+    return res.json({ quizResults: [] });
   }
-};
 
-// สร้างข้อสอบใหม่
-export const createQuiz = async (req, res) => {
+  res.json({ quizResults: results.quizResults });
+});
+
+/* =========================
+   CREATE QUIZ (ADMIN)
+========================= */
+export const createQuiz = TryCatch(async (req, res) => {
   const { title, questions } = req.body;
 
-  try {
-    const existingQuiz = await Quiz.findOne({ title });
-    if (existingQuiz) {
-      return res.status(400).json({ message: "Quiz with this title already exists" });
-    }
-
-    const newQuiz = new Quiz({ title, questions });
-    await newQuiz.save();
-    res.status(201).json({ message: "Quiz created successfully", quiz: newQuiz });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error creating quiz" });
-  }
-};
-
-// ฟังก์ชันลบ quiz ตาม quizId
-export const deleteQuiz = async (req, res) => {
-  const { quizId } = req.params;
-
-  try {
-    const quiz = await Quiz.findById(quizId);
-    if (!quiz) {
-      return res.status(404).json({ message: 'Quiz not found' });
-    }
-
-    await Quiz.findByIdAndDelete(quizId);
-    res.status(200).json({ message: 'Quiz deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting quiz:', error);
-    res.status(500).json({ message: 'Server error while deleting quiz' });
-  }
-};
-
-export const submitQuiz = async (req, res) => {
-  const { quizId } = req.params;
-  const { answers, userId, userName, userEmail } = req.body;
-
-  try {
-    const quiz = await Quiz.findById(quizId);
-    if (!quiz) {
-      return res.status(404).json({ message: "Quiz not found" });
-    }
-
-    let score = 0;
-    const wrongQuestions = [];
-
-    // Match answers by questionId, not by index
-    answers.forEach((userAnswer) => {
-      const question = quiz.questions.find(q => q._id.toString() === userAnswer.questionId);
-      if (question && userAnswer.selectedOption === question.correctOption) {
-        score++; // Increment score if the answer is correct
-      } else {
-        wrongQuestions.push(question); // Track wrong questions
-      }
+  if (!title || !questions || questions.length === 0) {
+    return res.status(400).json({
+      message: "Title and questions are required",
     });
+  }
 
-    const dateTaken = new Date();
+  const existingQuiz = await Quiz.findOne({ title });
+  if (existingQuiz) {
+    return res.status(400).json({
+      message: "Quiz with this title already exists",
+    });
+  }
 
-    // Save the result in QuizUser
-    await QuizUser.updateOne(
-      { userId },
-      {
-        $push: {
-          quizResults: {
-            quizId,
-            quizTitle: quiz.title,
-            score,
-            totalQuestions: quiz.questions.length,
-            dateTaken,
-            userName,
-            userEmail,
-          },
-        },
-      },
-      { upsert: true }
+  const quiz = await Quiz.create({ title, questions });
+
+  res.status(201).json({
+    message: "Quiz created successfully",
+    quiz,
+  });
+});
+
+/* =========================
+   DELETE QUIZ (ADMIN)
+========================= */
+export const deleteQuiz = TryCatch(async (req, res) => {
+  const { quizId } = req.params;
+
+  const quiz = await Quiz.findById(quizId);
+  if (!quiz) {
+    return res.status(404).json({ message: "Quiz not found" });
+  }
+
+  await Quiz.findByIdAndDelete(quizId);
+
+  res.json({ message: "Quiz deleted successfully" });
+});
+
+/* =========================
+   SUBMIT QUIZ
+========================= */
+export const submitQuiz = TryCatch(async (req, res) => {
+  const { quizId } = req.params;
+  const { answers } = req.body;
+  const userId = req.user._id;
+
+  const quiz = await Quiz.findById(quizId);
+  if (!quiz) {
+    return res.status(404).json({ message: "Quiz not found" });
+  }
+
+  let score = 0;
+  const wrongQuestions = [];
+
+  answers.forEach((userAnswer) => {
+    const question = quiz.questions.find(
+      (q) => q._id.toString() === userAnswer.questionId
     );
 
-    return res.status(200).json({ score, wrongQuestions });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error submitting quiz" });
-  }
-};
+    if (question && userAnswer.selectedOption === question.correctOption) {
+      score++;
+    } else if (question) {
+      wrongQuestions.push(question);
+    }
+  });
 
+  await QuizUser.updateOne(
+    { userId },
+    {
+      $push: {
+        quizResults: {
+          quizId,
+          quizTitle: quiz.title,
+          score,
+          totalQuestions: quiz.questions.length,
+          dateTaken: new Date(),
+        },
+      },
+    },
+    { upsert: true }
+  );
 
-
+  res.json({
+    score,
+    totalQuestions: quiz.questions.length,
+    wrongQuestions,
+  });
+});

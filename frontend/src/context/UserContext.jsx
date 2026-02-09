@@ -90,9 +90,13 @@ export const UserContextProvider = ({ children }) => {
         }
     }
 
-    useEffect(() => {
-        fetchUser();
-    }, []);
+   useEffect(() => {
+  if (localStorage.getItem("token")) {
+    fetchUser();
+  } else {
+    setLoading(false);
+  }
+}, []);
 
     return (
         <UserContext.Provider

@@ -4,30 +4,32 @@ import { Lecture } from "../models/Lecture.js";
 import { User } from "../models/User.js";
 import { Progress } from "../models/Progress.js";
 
+/* =======================
+   COURSE
+======================= */
+
 export const getAllCourses = TryCatch(async (req, res) => {
   const courses = await Courses.find();
-  res.json({
-    courses,
-  });
+  res.json({ courses });
 });
 
 export const getSingleCourse = TryCatch(async (req, res) => {
   const course = await Courses.findById(req.params.id);
-  res.json({
-    course,
-  });
+
+  if (!course) {
+    return res.status(404).json({ message: "Course not found" });
+  }
+
+  res.json({ course });
 });
+
+/* =======================
+   LECTURE
+======================= */
 
 export const fetchLectures = TryCatch(async (req, res) => {
   const lectures = await Lecture.find({ course: req.params.id });
 
-  if (!lectures.length) {
-    return res.status(404).json({
-      message: "No lectures found for this course",
-    });
-  }
-
-  // No subscription check here
   res.json({ lectures });
 });
 
@@ -35,91 +37,95 @@ export const fetchLecture = TryCatch(async (req, res) => {
   const lecture = await Lecture.findById(req.params.id);
 
   if (!lecture) {
-    return res.status(404).json({
-      message: "Lecture not found",
-    });
+    return res.status(404).json({ message: "Lecture not found" });
   }
 
-  // No subscription check here
   res.json({ lecture });
 });
 
+/* =======================
+   USER COURSES
+======================= */
+
 export const getMyCourses = TryCatch(async (req, res) => {
-  // ดึงข้อมูลคอร์สทั้งหมดจากฐานข้อมูล
   const courses = await Courses.find();
-  res.json({
-    courses,
-  });
+  res.json({ courses });
 });
+
+/* =======================
+   CHECKOUT (DISABLED)
+======================= */
+
 export const checkout = TryCatch(async (req, res) => {
-  const user = await User.findById(req.user._id);
-  const course = await Courses.findById(req.params.id);
-
-  if (!course) {
-    return res.status(404).json({ message: "Course not found" });
-  }
-
-  // No subscription check here
-  // const options = {
-  //   amount: Number(course.price * 100), // Razorpay expects amount in paise
-  //   currency: "INR",
-  // };
-
-  const order = await instance.orders.create(options);
-
-  res.status(201).json({
-    order,
-    course,
+  return res.status(501).json({
+    message: "Checkout not implemented yet",
   });
 });
+
+/* =======================
+   PROGRESS
+======================= */
 
 export const addProgress = TryCatch(async (req, res) => {
-  const progress = await Progress.findOne({
+  const courseId = req.query.course || req.body.course;
+  const lectureId = req.query.lectureId || req.body.lectureId;
+
+  if (!courseId || !lectureId) {
+    return res.status(400).json({
+      message: "courseId and lectureId are required",
+    });
+  }
+
+  let progress = await Progress.findOne({
     user: req.user._id,
-    course: req.query.course,
+    course: courseId,
   });
 
-  const { lectureId } = req.query;
-
   if (!progress) {
-    const newProgress = await Progress.create({
+    progress = await Progress.create({
       user: req.user._id,
-      course: req.query.course,
-      completedLectures: [],
+      course: courseId,
+      completedLectures: [lectureId],
     });
+
     return res.status(201).json({
-      message: "New Progress created",
-      progress: newProgress,
+      message: "Progress created",
+      progress,
     });
   }
 
-  if (progress.completedLectures.includes(lectureId)) {
-    return res.json({
-      message: "Progress recorded",
-    });
+  if (!progress.completedLectures.includes(lectureId)) {
+    progress.completedLectures.push(lectureId);
+    await progress.save();
   }
 
-  progress.completedLectures.push(lectureId);
-  await progress.save();
-
-  res.status(201).json({
-    message: "New Progress added",
+  res.json({
+    message: "Progress updated",
   });
 });
 
 export const getYourProgress = TryCatch(async (req, res) => {
-  const progress = await Progress.find({
+  const courseId = req.query.course;
+
+  const progress = await Progress.findOne({
     user: req.user._id,
-    course: req.query.course,
+    course: courseId,
   });
 
-  if (progress.length === 0) {
-    return res.status(404).json({ message: "null" });
+  if (!progress) {
+    return res.json({
+      courseProgressPercentage: 0,
+      completedLectures: 0,
+      allLectures: 0,
+      progress: null,
+    });
   }
 
-  const allLectures = (await Lecture.find({ course: req.query.course })).length;
-  const completedLectures = progress[0].completedLectures.length;
-  const courseProgressPercentage = (completedLectures * 100) / allLectures;
+  const allLectures = await Lecture.countDocuments({ course: courseId });
+  const completedLectures = progress.completedLectures.length;
+
+  const courseProgressPercentage =
+    allLectures === 0 ? 0 : (completedLectures * 100) / allLectures;
 
   res.json({
     courseProgressPercentage,
