@@ -1,38 +1,24 @@
 import jwt from "jsonwebtoken";
-import { User } from "../models/User.js";
 
-export const isAuth = async (req, res, next) => {
+export const isAuth = (req, res, next) => {
+  const token = req.headers.token;
+
+  if (!token) {
+    return res.status(403).json({ message: "Token missing" });
+  }
+
   try {
-    const token = req.headers.token;
-
-    if (!token)
-      return res.status(403).json({
-        message: "Please Login",
-      });
-
-    const decodedData = jwt.verify(token, process.env.Jwt_Sec);
-
-    req.user = await User.findById(decodedData._id);
-
+    const decoded = jwt.verify(token, process.env.Jwt_Sec);
+    req.user = decoded;
     next();
   } catch (error) {
-    res.status(500).json({
-      message: "Login First",
-    });
+    res.status(401).json({ message: "Invalid token" });
   }
 };
 
 export const isAdmin = (req, res, next) => {
-  try {
-    if (req.user.role !== "admin")
-      return res.status(403).json({
-        message: "You are not admin",
-      });
-
-    next();
-  } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ message: "Admin only" });
   }
+  next();
 };
