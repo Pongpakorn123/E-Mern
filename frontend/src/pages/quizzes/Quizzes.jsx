@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useQuizContext } from "../../context/QuizContext";
-import "./Quizzes.css";
+import "./quizzes.css";
 
 const Quizzes = () => {
   const { quizzes, loading } = useQuizContext();  // Make sure `loading` is provided by context
