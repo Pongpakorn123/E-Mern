@@ -9,8 +9,10 @@ export const QuizProvider = ({ children }) => {
   useEffect(() => {
     const fetchQuizzes = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/quizzes");
-        setQuizzes(response.data.quizzes);
+        const res = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/quizzes`
+        );
+        setQuizzes(res.data.quizzes);
       } catch (error) {
         console.error("Error fetching quizzes:", error);
       }
@@ -18,7 +20,7 @@ export const QuizProvider = ({ children }) => {
 
     fetchQuizzes();
   }, []);
-  
+
   return (
     <QuizContext.Provider value={{ quizzes }}>
       {children}
