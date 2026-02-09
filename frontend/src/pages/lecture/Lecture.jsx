@@ -17,14 +17,13 @@ const Lecture = ({ user }) => {
 
   const [loading, setLoading] = useState(true);
   const [lecLoading, setLecLoading] = useState(false);
-
   const [show, setShow] = useState(false);
-  const [btnLoading, setBtnLoading] = useState(false);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [video, setVideo] = useState(null);
   const [videoPrev, setVideoPrev] = useState("");
+  const [btnLoading, setBtnLoading] = useState(false);
 
   const [completed, setCompleted] = useState(0);
   const [completedLec, setCompletedLec] = useState(0);
@@ -33,78 +32,65 @@ const Lecture = ({ user }) => {
 
   const [maxTime, setMaxTime] = useState(0);
 
-  // 🔐 Admin protection
-  if (
-    user &&
-    user.role === "admin" &&
-    Array.isArray(user.user) &&
-    user.user.includes(courseId)
-  ) {
-    navigate("/");
-  }
+  /* ================= ADMIN PROTECT ================= */
+  useEffect(() => {
+    if (
+      user &&
+      user.role === "admin" &&
+      Array.isArray(user.user) &&
+      user.user.includes(courseId)
+    ) {
+      navigate("/");
+    }
+  }, [user, courseId, navigate]);
 
-  // ================= FETCH =================
-
+  /* ================= FETCH ================= */
   const fetchLectures = async () => {
-    if (!courseId) return;
-
     try {
       const { data } = await axios.get(
         `${server}/api/lectures/${courseId}`,
-        {
-          headers: { token: localStorage.getItem("token") },
-        }
+        { headers: { token: localStorage.getItem("token") } }
       );
       setLectures(data.lectures || []);
     } catch (err) {
-      console.error(err);
+      console.log(err);
     } finally {
       setLoading(false);
     }
   };
 
   const fetchLecture = async (lectureId) => {
-    if (!lectureId) return;
-
     setLecLoading(true);
     try {
       const { data } = await axios.get(
         `${server}/api/lecture/${lectureId}`,
-        {
-          headers: { token: localStorage.getItem("token") },
-        }
+        { headers: { token: localStorage.getItem("token") } }
       );
       setLecture(data.lecture);
       setMaxTime(0);
     } catch (err) {
-      console.error(err);
+      console.log(err);
     } finally {
       setLecLoading(false);
     }
   };
 
   const fetchProgress = async () => {
-    if (!courseId) return;
-
     try {
       const { data } = await axios.get(
         `${server}/api/user/progress?course=${courseId}`,
-        {
-          headers: { token: localStorage.getItem("token") },
-        }
+        { headers: { token: localStorage.getItem("token") } }
       );
-
       setCompleted(data.courseProgressPercentage || 0);
       setCompletedLec(data.completedLectures || 0);
       setLectLength(data.allLectures || 0);
       setProgress(data.progress || []);
     } catch (err) {
-      console.error(err);
+      console.log(err);
     }
   };
 
-  // ================= ADD / DELETE =================
-
+  /* ================= ADD / DELETE ================= */
   const submitHandler = async (e) => {
     e.preventDefault();
     if (!video) return toast.error("Please select a video");
@@ -117,7 +103,7 @@ const Lecture = ({ user }) => {
 
     try {
       const { data } = await axios.post(
-        `${server}/api/course/${courseId}`,
+        `${server}/api/admin/course/${courseId}`,
         formData,
         { headers: { token: localStorage.getItem("token") } }
       );
@@ -130,7 +116,7 @@ const Lecture = ({ user }) => {
       setVideoPrev("");
       fetchLectures();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Something went wrong");
+      toast.error(err.response?.data?.message || "Upload failed");
     } finally {
       setBtnLoading(false);
     }
@@ -141,7 +127,7 @@ const Lecture = ({ user }) => {
 
     try {
       const { data } = await axios.delete(
-        `${server}/api/lecture/${lectureId}`,
+        `${server}/api/admin/lecture/${lectureId}`,
         { headers: { token: localStorage.getItem("token") } }
       );
       toast.success(data.message);
@@ -151,25 +137,7 @@ const Lecture = ({ user }) => {
     }
   };
 
-  // ================= PROGRESS =================
-
-  const addProgress = async (lectureId) => {
-    if (!lectureId || !courseId) return;
-
-    try {
-      await axios.post(
-        `${server}/api/user/progress?course=${courseId}&lectureId=${lectureId}`,
-        {},
-        { headers: { token: localStorage.getItem("token") } }
-      );
-      fetchProgress();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  // ================= VIDEO CONTROL =================
-
+  /* ================= VIDEO CONTROL ================= */
   const handleTimeUpdate = () => {
     const current = videoRef.current?.currentTime || 0;
     if (current > maxTime) setMaxTime(current);
@@ -181,15 +149,26 @@ const Lecture = ({ user }) => {
     }
   };
 
-  // ================= EFFECT =================
+  const addProgress = async (lectureId) => {
+    try {
+      await axios.post(
+        `${server}/api/user/progress?course=${courseId}&lectureId=${lectureId}`,
+        {},
+        { headers: { token: localStorage.getItem("token") } }
+      );
+      fetchProgress();
+    } catch (err) {
+      console.log(err);
+    }
+  };
 
+  /* ================= EFFECT ================= */
   useEffect(() => {
     fetchLectures();
     fetchProgress();
   }, [courseId]);
 
-  // ================= RENDER =================
-
+  /* ================= RENDER ================= */
   if (loading) return <Loading />;
 
   return (
@@ -210,7 +189,7 @@ const Lecture = ({ user }) => {
             <>
               <video
                 ref={videoRef}
-                src={`${server}/${lecture.video}`}
+                src={lecture.video}
                 width="100%"
                 controls
                 autoPlay
@@ -238,15 +217,25 @@ const Lecture = ({ user }) => {
 
           {show && (
             <form className="lecture-form" onSubmit={submitHandler}>
-              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" required />
-              <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" required />
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Title"
+                required
+              />
+              <input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Description"
+                required
+              />
               <input
                 type="file"
+                required
                 onChange={(e) => {
                   setVideo(e.target.files[0]);
                   setVideoPrev(URL.createObjectURL(e.target.files[0]));
                 }}
-                required
               />
               {videoPrev && <video src={videoPrev} width={250} controls />}
               <button disabled={btnLoading} className="common-btn">
@@ -259,7 +248,9 @@ const Lecture = ({ user }) => {
             lectures.map((lec, i) => (
               <div key={lec._id}>
                 <div
-                  className={`lecture-number ${lecture?._id === lec._id ? "active" : ""}`}
+                  className={`lecture-number ${
+                    lecture?._id === lec._id ? "active" : ""
+                  }`}
                   onClick={() => fetchLecture(lec._id)}
                 >
                   {i + 1}. {lec.title}
