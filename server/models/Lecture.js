@@ -17,7 +17,7 @@ const schema = new mongoose.Schema({
   },
 
   videoPublicId: {
-    type: String, // 🔥 สำคัญ สำหรับลบ video
+    type: String, // 
     required: true,
   },
 

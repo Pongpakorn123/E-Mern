@@ -17,7 +17,7 @@ const schema = new mongoose.Schema({
   },
 
   imagePublicId: {
-    type: String, // 🔥 สำคัญมาก สำหรับลบรูป
+    type: String, // 
     required: true,
   },
 
