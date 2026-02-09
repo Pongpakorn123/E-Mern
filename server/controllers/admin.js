@@ -1,11 +1,29 @@
 import TryCatch from "../middlewares/TryCatch.js";
+import streamifier from "streamifier";
 import cloudinary from "../config/cloudinary.js";
 import { Courses } from "../models/Courses.js";
 import { Lecture } from "../models/Lecture.js";
 import { User } from "../models/User.js";
 
 /* =========================
-   CREATE COURSE
+   HELPER: UPLOAD BUFFER
+========================= */
+const uploadFromBuffer = (buffer, options) => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.v2.uploader.upload_stream(
+      options,
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
+    );
+
+    streamifier.createReadStream(buffer).pipe(stream);
+  });
+};
+
+/* =========================
+   CREATE COURSE (IMAGE)
 ========================= */
 export const createCourse = TryCatch(async (req, res) => {
   const { title, description, category, createdBy, duration, price } = req.body;
@@ -14,12 +32,9 @@ export const createCourse = TryCatch(async (req, res) => {
     return res.status(400).json({ message: "Image is required" });
   }
 
-  const imageUpload = await cloudinary.v2.uploader.upload(
-    `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`,
-    {
-      folder: "courses",
-    }
-  );
+  const imageUpload = await uploadFromBuffer(req.file.buffer, {
+    folder: "courses",
+  });
 
   await Courses.create({
     title,
@@ -38,15 +53,12 @@ export const createCourse = TryCatch(async (req, res) => {
 });
 
 /* =========================
-   ADD LECTURE
+   ADD LECTURE (VIDEO)
 ========================= */
 export const addLectures = TryCatch(async (req, res) => {
   const course = await Courses.findById(req.params.id);
-
   if (!course) {
-    return res.status(404).json({
-      message: "No Course with this id",
-    });
+    return res.status(404).json({ message: "No Course with this id" });
   }
 
   const { title, description } = req.body;
@@ -55,13 +67,10 @@ export const addLectures = TryCatch(async (req, res) => {
     return res.status(400).json({ message: "Video is required" });
   }
 
-  const videoUpload = await cloudinary.v2.uploader.upload(
-    `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`,
-    {
-      resource_type: "video",
-      folder: "lectures",
-    }
-  );
+  const videoUpload = await uploadFromBuffer(req.file.buffer, {
+    resource_type: "video",
+    folder: "lectures",
+  });
 
   const lecture = await Lecture.create({
     title,
@@ -87,7 +96,6 @@ export const deleteLecture = TryCatch(async (req, res) => {
     return res.status(404).json({ message: "Lecture not found" });
   }
 
-  // delete video from cloudinary
   if (lecture.videoPublicId) {
     await cloudinary.v2.uploader.destroy(lecture.videoPublicId, {
       resource_type: "video",
@@ -95,7 +103,6 @@ export const deleteLecture = TryCatch(async (req, res) => {
   }
 
   await lecture.deleteOne();
-
   res.json({ message: "Lecture Deleted" });
 });
 
@@ -111,7 +118,6 @@ export const deleteCourse = TryCatch(async (req, res) => {
 
   const lectures = await Lecture.find({ course: course._id });
 
-  // delete all lecture videos
   await Promise.all(
     lectures.map(async (lecture) => {
       if (lecture.videoPublicId) {
@@ -122,22 +128,16 @@ export const deleteCourse = TryCatch(async (req, res) => {
     })
   );
 
-  // delete course image
   if (course.imagePublicId) {
     await cloudinary.v2.uploader.destroy(course.imagePublicId);
   }
 
   await Lecture.deleteMany({ course: course._id });
   await course.deleteOne();
-
-  // remove course from user subscriptions
   await User.updateMany({}, { $pull: { subscription: course._id } });
 
-  res.json({
-    message: "Course Deleted",
-  });
+  res.json({ message: "Course Deleted" });
 });
-
 /* =========================
    STATS
 ========================= */

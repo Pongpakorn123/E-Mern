@@ -77,7 +77,7 @@ export const addProgress = TryCatch(async (req, res) => {
     course: courseId,
   });
 
-  // ยังไม่เคยมี progress
+ 
   if (!progress) {
     progress = await Progress.create({
       user: req.user._id,
@@ -91,7 +91,7 @@ export const addProgress = TryCatch(async (req, res) => {
     });
   }
 
-  // กันซ้ำ
+
   if (!progress.completedLectures.includes(lectureId)) {
     progress.completedLectures.push(lectureId);
     await progress.save();
@@ -116,7 +116,7 @@ export const getYourProgress = TryCatch(async (req, res) => {
 
   const allLectures = await Lecture.countDocuments({ course: courseId });
 
-  // ❗ สำคัญมาก: กรณียังไม่เริ่มเรียน
+
   if (!progress) {
     return res.json({
       courseProgressPercentage: 0,
