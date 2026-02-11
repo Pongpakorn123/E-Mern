@@ -21,27 +21,40 @@ const app = express();
 
 app.use(helmet());
 
-//  FIXED CORS
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "https://e-mern.vercel.app", // domain หลัก
-  "https://e-mern-6152vxca-pongpakorn123s-projects.vercel.app", // preview domain
-  process.env.CLIENT_URL, // จาก Render env
-];
-
+// FIXED CORS (รองรับ Vercel preview ทุกอัน)
 app.use(
   cors({
     origin: function (origin, callback) {
       // allow Postman / mobile apps
       if (!origin) return callback(null, true);
 
-      if (allowedOrigins.includes(origin)) {
+      const allowedLocal = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+      ];
+
+      // allow localhost
+      if (allowedLocal.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // allow main vercel domain
+      if (origin === "https://e-mern.vercel.app") {
+        return callback(null, true);
+      }
+
+      // allow ALL vercel preview deployments
+      if (origin.endsWith(".vercel.app")) {
+        return callback(null, true);
+      }
+
+      // allow from env (Render)
+      if (origin === process.env.CLIENT_URL) {
         return callback(null, true);
       }
 
       console.log("Blocked by CORS:", origin);
-      return callback(null, false);
+      return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
   })
@@ -77,7 +90,7 @@ app.use((err, req, res, next) => {
   console.error("SERVER ERROR:", err);
   res.status(500).json({
     success: false,
-    message: "Internal Server Error",
+    message: err.message || "Internal Server Error",
   });
 });
 
@@ -90,7 +103,7 @@ const PORT = process.env.PORT || 5000;
 connectDb()
   .then(() => {
     app.listen(PORT, () => {
-      console.log(`✅ MongoDB connected`);
+      console.log("✅ MongoDB connected");
       console.log(`✅ Server running on port ${PORT}`);
     });
   })
