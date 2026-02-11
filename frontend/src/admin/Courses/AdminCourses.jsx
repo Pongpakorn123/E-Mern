@@ -24,7 +24,6 @@ const AdminCourses = ({ user }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
-  const [price, setPrice] = useState("");
   const [createdBy, setCreatedBy] = useState("");
   const [duration, setDuration] = useState("");
   const [image, setImage] = useState("");
@@ -54,32 +53,40 @@ const AdminCourses = ({ user }) => {
     myForm.append("title", title);
     myForm.append("description", description);
     myForm.append("category", category);
-    myForm.append("price", price);
     myForm.append("createdBy", createdBy);
     myForm.append("duration", duration);
-    myForm.append("file", image);
+    myForm.append("image", image);
 
     try {
-      const { data } = await axios.post(`${server}/api/admin/course/new`, myForm, {
-        headers: {
-         Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      const { data } = await axios.post(
+        `${server}/api/admin/course/new`,
+        myForm,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
 
       toast.success(data.message);
-      setBtnLoading(false);
+
       await fetchCourses();
-      setImage("");
+
       setTitle("");
       setDescription("");
       setDuration("");
+      setImage("");
       setImagePrev("");
       setCreatedBy("");
-     
       setCategory("");
+
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(
+        error.response?.data?.message || "Something went wrong"
+      );
     }
+
+    setBtnLoading(false);
   };
 
   return (
@@ -89,9 +96,9 @@ const AdminCourses = ({ user }) => {
           <h1>All Courses</h1>
           <div className="dashboard-content">
             {courses && courses.length > 0 ? (
-              courses.map((e) => {
-                return <CourseCard key={e._id} course={e} />;
-              })
+              courses.map((e) => (
+                <CourseCard key={e._id} course={e} />
+              ))
             ) : (
               <p>No Courses Yet</p>
             )}
@@ -103,7 +110,7 @@ const AdminCourses = ({ user }) => {
             <div className="course-form">
               <h2>Add Course</h2>
               <form onSubmit={submitHandler}>
-                <label htmlFor="text">Title</label>
+                <label>Title</label>
                 <input
                   type="text"
                   value={title}
@@ -111,7 +118,7 @@ const AdminCourses = ({ user }) => {
                   required
                 />
 
-                <label htmlFor="text">Description</label>
+                <label>Description</label>
                 <input
                   type="text"
                   value={description}
@@ -119,15 +126,7 @@ const AdminCourses = ({ user }) => {
                   required
                 />
 
-                {/* <label htmlFor="text">Date</label>
-                <input
-                  type="number"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  required
-                /> */}
-
-                <label htmlFor="text">createdBy</label>
+                <label>Created By</label>
                 <input
                   type="text"
                   value={createdBy}
@@ -138,8 +137,9 @@ const AdminCourses = ({ user }) => {
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
+                  required
                 >
-                  <option value={""}>Select Category</option>
+                  <option value="">Select Category</option>
                   {categories.map((e) => (
                     <option value={e} key={e}>
                       {e}
@@ -147,7 +147,7 @@ const AdminCourses = ({ user }) => {
                   ))}
                 </select>
 
-                <label htmlFor="text">Duration</label>
+                <label>Duration</label>
                 <input
                   type="number"
                   value={duration}
@@ -156,6 +156,7 @@ const AdminCourses = ({ user }) => {
                 />
 
                 <input type="file" required onChange={changeImageHandler} />
+
                 {imagePrev && <img src={imagePrev} alt="" width={300} />}
 
                 <button
