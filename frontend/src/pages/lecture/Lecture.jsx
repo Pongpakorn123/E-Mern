@@ -12,6 +12,8 @@ const Lecture = ({ user }) => {
   const navigate = useNavigate();
   const videoRef = useRef(null);
 
+  const token = localStorage.getItem("token");
+
   const [lectures, setLectures] = useState([]);
   const [lecture, setLecture] = useState(null);
 
@@ -32,24 +34,17 @@ const Lecture = ({ user }) => {
 
   const [maxTime, setMaxTime] = useState(0);
 
-  /* ================= ADMIN PROTECT ================= */
-  useEffect(() => {
-    if (
-      user &&
-      user.role === "admin" &&
-      Array.isArray(user.user) &&
-      user.user.includes(courseId)
-    ) {
-      navigate("/");
-    }
-  }, [user, courseId, navigate]);
-
   /* ================= FETCH ================= */
+
   const fetchLectures = async () => {
     try {
       const { data } = await axios.get(
         `${server}/api/lectures/${courseId}`,
-        { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
       setLectures(data.lectures || []);
     } catch (err) {
@@ -64,7 +59,11 @@ const Lecture = ({ user }) => {
     try {
       const { data } = await axios.get(
         `${server}/api/lecture/${lectureId}`,
-        { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
       setLecture(data.lecture);
       setMaxTime(0);
@@ -79,8 +78,13 @@ const Lecture = ({ user }) => {
     try {
       const { data } = await axios.get(
         `${server}/api/user/progress?course=${courseId}`,
-        { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
+
       setCompleted(data.courseProgressPercentage || 0);
       setCompletedLec(data.completedLectures || 0);
       setLectLength(data.allLectures || 0);
@@ -90,7 +94,8 @@ const Lecture = ({ user }) => {
     }
   };
 
-  /* ================= ADD / DELETE ================= */
+  /* ================= ADD LECTURE ================= */
+
   const submitHandler = async (e) => {
     e.preventDefault();
     if (!video) return toast.error("Please select a video");
@@ -100,13 +105,17 @@ const Lecture = ({ user }) => {
     const formData = new FormData();
     formData.append("title", title);
     formData.append("description", description);
-    formData.append("video", video); 
+    formData.append("video", video);
 
     try {
       const { data } = await axios.post(
         `${server}/api/admin/course/${courseId}`,
         formData,
-        { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
 
       toast.success(data.message);
@@ -123,14 +132,21 @@ const Lecture = ({ user }) => {
     }
   };
 
+  /* ================= DELETE ================= */
+
   const deleteHandler = async (lectureId) => {
-    if (!confirm("Delete this lecture?")) return;
+    if (!window.confirm("Delete this lecture?")) return;
 
     try {
       const { data } = await axios.delete(
         `${server}/api/admin/lecture/${lectureId}`,
-        { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
+
       toast.success(data.message);
       fetchLectures();
     } catch (err) {
@@ -139,6 +155,7 @@ const Lecture = ({ user }) => {
   };
 
   /* ================= VIDEO CONTROL ================= */
+
   const handleTimeUpdate = () => {
     const current = videoRef.current?.currentTime || 0;
     if (current > maxTime) setMaxTime(current);
@@ -155,7 +172,11 @@ const Lecture = ({ user }) => {
       await axios.post(
         `${server}/api/user/progress?course=${courseId}&lectureId=${lectureId}`,
         {},
-        { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
       fetchProgress();
     } catch (err) {
@@ -164,12 +185,20 @@ const Lecture = ({ user }) => {
   };
 
   /* ================= EFFECT ================= */
+
   useEffect(() => {
+    if (!token) {
+      toast.error("Please login again");
+      navigate("/login");
+      return;
+    }
+
     fetchLectures();
     fetchProgress();
   }, [courseId]);
 
   /* ================= RENDER ================= */
+
   if (loading) return <Loading />;
 
   return (
@@ -182,7 +211,6 @@ const Lecture = ({ user }) => {
       </div>
 
       <div className="lecture-page">
-        {/* LEFT */}
         <div className="left">
           {lecLoading ? (
             <Loading />
@@ -208,7 +236,6 @@ const Lecture = ({ user }) => {
           )}
         </div>
 
-        {/* RIGHT */}
         <div className="right">
           {user?.role === "admin" && (
             <button className="common-btn" onClick={() => setShow(!show)}>
