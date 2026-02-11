@@ -21,34 +21,35 @@ const app = express();
 
 app.use(helmet());
 
-// ✅ FIX CORS (รองรับหลาย domain + localhost)
+//  FIXED CORS
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
-  "https://e-mern-6152vxca-pongpakorn123s-projects.vercel.app",
-  process.env.CLIENT_URL, // เผื่อใช้ env
+  "https://e-mern.vercel.app", // domain หลัก
+  "https://e-mern-6152vxca-pongpakorn123s-projects.vercel.app", // preview domain
+  process.env.CLIENT_URL, // จาก Render env
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // allow requests with no origin (Postman, mobile apps, etc.)
+      // allow Postman / mobile apps
       if (!origin) return callback(null, true);
 
       if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
+        return callback(null, true);
       }
+
+      console.log("Blocked by CORS:", origin);
+      return callback(null, false);
     },
     credentials: true,
   })
 );
 
-// JSON parser
 app.use(express.json());
 
-// static (optional)
+// static
 app.use("/uploads", express.static("uploads"));
 
 /* =========================
@@ -73,7 +74,7 @@ app.use("/api", adminResultsRoutes);
 ========================= */
 
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error("SERVER ERROR:", err);
   res.status(500).json({
     success: false,
     message: "Internal Server Error",
@@ -89,6 +90,7 @@ const PORT = process.env.PORT || 5000;
 connectDb()
   .then(() => {
     app.listen(PORT, () => {
+      console.log(`✅ MongoDB connected`);
       console.log(`✅ Server running on port ${PORT}`);
     });
   })
