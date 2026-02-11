@@ -20,7 +20,7 @@ const CourseStudy = ({ users }) => {
     <>
       {course && (
         <div className="course-study-page">
-          <img src={`${server}/${course.image}`} alt="" width={350} />
+          <img src={course.image} />
           <h2>{course.title}</h2>
           <h4>{course.description}</h4>
           <h5>by - {course.createdBy}</h5>

@@ -27,11 +27,7 @@ const CourseDescription = () => {
           {course && (
             <div className="course-description">
               <div className="course-header">
-                <img
-                  src={`${server}/${course.image}`}
-                  alt=""
-                  className="course-image"
-                />
+                <img src={course.image} />
                 <div className="course-info">
                   <h2>{course.title}</h2>
                   <p>Instructor: {course.createdBy}</p>

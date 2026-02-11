@@ -49,7 +49,7 @@ const Lecture = ({ user }) => {
     try {
       const { data } = await axios.get(
         `${server}/api/lectures/${courseId}`,
-        { headers: { token: localStorage.getItem("token") } }
+        { Authorization: `Bearer ${localStorage.getItem("token")}` }
       );
       setLectures(data.lectures || []);
     } catch (err) {
@@ -64,7 +64,7 @@ const Lecture = ({ user }) => {
     try {
       const { data } = await axios.get(
         `${server}/api/lecture/${lectureId}`,
-        { headers: { token: localStorage.getItem("token") } }
+        { Authorization: `Bearer ${localStorage.getItem("token")}` }
       );
       setLecture(data.lecture);
       setMaxTime(0);
@@ -79,7 +79,7 @@ const Lecture = ({ user }) => {
     try {
       const { data } = await axios.get(
         `${server}/api/user/progress?course=${courseId}`,
-        { headers: { token: localStorage.getItem("token") } }
+        { Authorization: `Bearer ${localStorage.getItem("token")}` }
       );
       setCompleted(data.courseProgressPercentage || 0);
       setCompletedLec(data.completedLectures || 0);
@@ -106,7 +106,7 @@ const Lecture = ({ user }) => {
       const { data } = await axios.post(
         `${server}/api/admin/course/${courseId}`,
         formData,
-        { headers: { token: localStorage.getItem("token") } }
+        { Authorization: `Bearer ${localStorage.getItem("token")}` }
       );
 
       toast.success(data.message);
@@ -129,7 +129,7 @@ const Lecture = ({ user }) => {
     try {
       const { data } = await axios.delete(
         `${server}/api/admin/lecture/${lectureId}`,
-        { headers: { token: localStorage.getItem("token") } }
+        { Authorization: `Bearer ${localStorage.getItem("token")}` }
       );
       toast.success(data.message);
       fetchLectures();
@@ -155,7 +155,7 @@ const Lecture = ({ user }) => {
       await axios.post(
         `${server}/api/user/progress?course=${courseId}&lectureId=${lectureId}`,
         {},
-        { headers: { token: localStorage.getItem("token") } }
+        { Authorization: `Bearer ${localStorage.getItem("token")}` }
       );
       fetchProgress();
     } catch (err) {
