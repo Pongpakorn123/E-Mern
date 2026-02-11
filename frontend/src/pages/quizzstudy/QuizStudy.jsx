@@ -56,35 +56,39 @@ const QuizStudy = ({ user }) => {
     setCurrentQuestionIndex((prev) => prev + 1);
   };
 
-  const handleSubmitQuiz = async () => {
-    try {
-      const answersWithIds = quiz.questions.map((question, index) => ({
-        questionId: question._id,
-        selectedOption: answers[index],
-      }));
+ const handleSubmitQuiz = async () => {
+  try {
+    const answersWithIds = quiz.questions.map((question, index) => ({
+      questionId: question._id,
+      selectedOption: answers[index],
+    }));
 
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/quizzes/submit/${quiz._id}`,
-        {
-          answers: answersWithIds,
-          userId: user._id,
-          userName: user.name,
-          userEmail: user.email,
-        }
-      );
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_URL}/api/quizzes/submit/${quiz._id}`,
+      {
+        answers: answersWithIds,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      }
+    );
 
-      const resultScore = response.data.score;
-      const incorrectQuestions = quiz.questions.filter(
-        (q, index) => answers[index] !== q.correctOption
-      );
+    const resultScore = response.data.score;
 
-      setScore(resultScore);
-      setWrongQuestions(incorrectQuestions);
-      setShowResult(true);
-    } catch (error) {
-      console.error("Submit quiz error:", error);
-    }
-  };
+    const incorrectQuestions = quiz.questions.filter(
+      (q, index) => answers[index] !== q.correctOption
+    );
+
+    setScore(resultScore);
+    setWrongQuestions(incorrectQuestions);
+    setShowResult(true);
+  } catch (error) {
+    console.error("Submit quiz error:", error);
+  }
+};
+
 
   useEffect(() => {
     fetchQuiz();
