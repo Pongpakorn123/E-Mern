@@ -21,12 +21,32 @@ const app = express();
 
 app.use(helmet());
 
+// ✅ FIX CORS (รองรับหลาย domain + localhost)
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://e-mern-6152vxca-pongpakorn123s-projects.vercel.app",
+  process.env.CLIENT_URL, // เผื่อใช้ env
+];
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "*",
+    origin: function (origin, callback) {
+      // allow requests with no origin (Postman, mobile apps, etc.)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
+
+// JSON parser
+app.use(express.json());
 
 // static (optional)
 app.use("/uploads", express.static("uploads"));
@@ -39,11 +59,8 @@ app.get("/", (req, res) => {
   res.send("Server is working");
 });
 
-// multipart first
+// admin routes
 app.use("/api/admin", adminRoutes);
-
-// JSON parser
-app.use(express.json());
 
 // other routes
 app.use("/api", userRoutes);
