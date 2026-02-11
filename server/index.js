@@ -1,6 +1,9 @@
-import express from "express";
 import dotenv from "dotenv";
+dotenv.config();
+
+import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 
 import { connectDb } from "./database/db.js";
 
@@ -10,27 +13,22 @@ import adminRoutes from "./routes/admin.js";
 import quizRoutes from "./routes/quizRoutes.js";
 import adminResultsRoutes from "./routes/adminResultsRoutes.js";
 
-dotenv.config();
-
 const app = express();
 
 /* =========================
    MIDDLEWARE
 ========================= */
 
-// body parser
-app.use(express.json());
+app.use(helmet());
 
-// CORS (สำคัญมากสำหรับ Vercel ↔ Render)
 app.use(
   cors({
-    origin: "*", // ถ้าจะ strict ค่อยเปลี่ยนเป็น domain frontend
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "token", "Authorization"],
+    origin: process.env.CLIENT_URL || "*",
+    credentials: true,
   })
 );
 
-// static files
+// static (optional)
 app.use("/uploads", express.static("uploads"));
 
 /* =========================
@@ -41,20 +39,29 @@ app.get("/", (req, res) => {
   res.send("Server is working");
 });
 
-// user / auth
+// multipart first
+app.use("/api/admin", adminRoutes);
+
+// JSON parser
+app.use(express.json());
+
+// other routes
 app.use("/api", userRoutes);
-
-// courses
 app.use("/api", courseRoutes);
-
-// admin
-app.use("/api", adminRoutes);
-
-// quizzes
 app.use("/api/quizzes", quizRoutes);
-
-// admin results
 app.use("/api", adminResultsRoutes);
+
+/* =========================
+   ERROR HANDLER
+========================= */
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    success: false,
+    message: "Internal Server Error",
+  });
+});
 
 /* =========================
    SERVER START

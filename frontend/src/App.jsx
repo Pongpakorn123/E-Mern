@@ -14,7 +14,7 @@ import Loading from "./components/loading/Loading";
 import Courses from "./pages/courses/Courses";
 import CourseDescription from "./pages/coursedescription/CourseDescription";
 import PaymentSuccess from "./pages/paymentsuccess/PaymentSuccess";
-import Dashbord from "./pages/dashbord/Dashbord";
+import Dashbord from "./pages/dashbord/Dashboard";
 import CourseStudy from "./pages/coursestudy/CourseStudy";
 import Lecture from "./pages/lecture/Lecture";
 import AdminDashbord from "./admin/Dashboard/AdminDashbord";

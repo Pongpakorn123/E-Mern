@@ -96,10 +96,11 @@ const Lecture = ({ user }) => {
     if (!video) return toast.error("Please select a video");
 
     setBtnLoading(true);
+
     const formData = new FormData();
     formData.append("title", title);
     formData.append("description", description);
-    formData.append("file", video);
+    formData.append("video", video); 
 
     try {
       const { data } = await axios.post(
@@ -231,10 +232,13 @@ const Lecture = ({ user }) => {
               />
               <input
                 type="file"
+                accept="video/*"
                 required
                 onChange={(e) => {
-                  setVideo(e.target.files[0]);
-                  setVideoPrev(URL.createObjectURL(e.target.files[0]));
+                  const file = e.target.files[0];
+                  if (!file) return;
+                  setVideo(file);
+                  setVideoPrev(URL.createObjectURL(file));
                 }}
               />
               {videoPrev && <video src={videoPrev} width={250} controls />}

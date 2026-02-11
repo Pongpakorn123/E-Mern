@@ -8,17 +8,17 @@ import { User } from "../models/User.js";
 /* =========================
    HELPER: UPLOAD BUFFER
 ========================= */
-const uploadFromBuffer = (buffer, options) => {
+const uploadFromBuffer = (buffer, options = {}) => {
   return new Promise((resolve, reject) => {
-    const stream = cloudinary.v2.uploader.upload_stream(
+    const uploadStream = cloudinary.uploader.upload_stream(
       options,
       (error, result) => {
-        if (error) reject(error);
-        else resolve(result);
+        if (error) return reject(error);
+        resolve(result);
       }
     );
 
-    streamifier.createReadStream(buffer).pipe(stream);
+    streamifier.createReadStream(buffer).pipe(uploadStream);
   });
 };
 
@@ -26,7 +26,7 @@ const uploadFromBuffer = (buffer, options) => {
    CREATE COURSE (IMAGE)
 ========================= */
 export const createCourse = TryCatch(async (req, res) => {
-  const { title, description, category, createdBy, duration, price } = req.body;
+  const { title, description, category, createdBy, duration } = req.body;
 
   if (!req.file) {
     return res.status(400).json({ message: "Image is required" });
@@ -42,7 +42,6 @@ export const createCourse = TryCatch(async (req, res) => {
     category,
     createdBy,
     duration,
-    price,
     image: imageUpload.secure_url,
     imagePublicId: imageUpload.public_id,
   });
@@ -57,8 +56,9 @@ export const createCourse = TryCatch(async (req, res) => {
 ========================= */
 export const addLectures = TryCatch(async (req, res) => {
   const course = await Courses.findById(req.params.id);
+
   if (!course) {
-    return res.status(404).json({ message: "No Course with this id" });
+    return res.status(404).json({ message: "Course not found" });
   }
 
   const { title, description } = req.body;
@@ -81,7 +81,7 @@ export const addLectures = TryCatch(async (req, res) => {
   });
 
   res.status(201).json({
-    message: "Lecture Added",
+    message: "Lecture Added Successfully",
     lecture,
   });
 });
@@ -96,14 +96,16 @@ export const deleteLecture = TryCatch(async (req, res) => {
     return res.status(404).json({ message: "Lecture not found" });
   }
 
+  // ลบ video จาก Cloudinary
   if (lecture.videoPublicId) {
-    await cloudinary.v2.uploader.destroy(lecture.videoPublicId, {
+    await cloudinary.uploader.destroy(lecture.videoPublicId, {
       resource_type: "video",
     });
   }
 
   await lecture.deleteOne();
-  res.json({ message: "Lecture Deleted" });
+
+  res.json({ message: "Lecture Deleted Successfully" });
 });
 
 /* =========================
@@ -118,26 +120,31 @@ export const deleteCourse = TryCatch(async (req, res) => {
 
   const lectures = await Lecture.find({ course: course._id });
 
+  // ลบ video ทุกตัวในคอร์ส
   await Promise.all(
     lectures.map(async (lecture) => {
       if (lecture.videoPublicId) {
-        await cloudinary.v2.uploader.destroy(lecture.videoPublicId, {
+        await cloudinary.uploader.destroy(lecture.videoPublicId, {
           resource_type: "video",
         });
       }
     })
   );
 
+  // ลบ image คอร์ส
   if (course.imagePublicId) {
-    await cloudinary.v2.uploader.destroy(course.imagePublicId);
+    await cloudinary.uploader.destroy(course.imagePublicId);
   }
 
   await Lecture.deleteMany({ course: course._id });
   await course.deleteOne();
+
+  // เอาคอร์สออกจาก subscription user
   await User.updateMany({}, { $pull: { subscription: course._id } });
 
-  res.json({ message: "Course Deleted" });
+  res.json({ message: "Course Deleted Successfully" });
 });
+
 /* =========================
    STATS
 ========================= */
@@ -156,23 +163,24 @@ export const getAllStats = TryCatch(async (req, res) => {
 });
 
 /* =========================
-   USERS
+   GET ALL USERS
 ========================= */
 export const getAllUser = TryCatch(async (req, res) => {
-  const users = await User.find({ _id: { $ne: req.user._id } }).select(
-    "-password"
-  );
+  const users = await User.find({
+    _id: { $ne: req.user._id },
+  }).select("-password");
 
   res.json({ users });
 });
 
 /* =========================
-   UPDATE ROLE
+   UPDATE ROLE (SUPERADMIN ONLY)
 ========================= */
 export const updateRole = TryCatch(async (req, res) => {
-  if (req.user.mainrole !== "superadmin") {
+  // 
+  if (req.user.role !== "superadmin") {
     return res.status(403).json({
-      message: "This endpoint is assigned to superadmin only",
+      message: "Only superadmin can change roles",
     });
   }
 
@@ -182,10 +190,18 @@ export const updateRole = TryCatch(async (req, res) => {
     return res.status(404).json({ message: "User not found" });
   }
 
+  if (user.role === "superadmin") {
+    return res.status(403).json({
+      message: "Cannot modify superadmin role",
+    });
+  }
+
+  // toggle role
   user.role = user.role === "user" ? "admin" : "user";
+
   await user.save();
 
-  res.status(200).json({
+  res.json({
     message: `Role updated to ${user.role}`,
   });
 });

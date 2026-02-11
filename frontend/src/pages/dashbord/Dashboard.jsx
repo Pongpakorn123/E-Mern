@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import "./dashbord.css";
+import "./dashboard.css";
 import CourseCard from "../../components/coursecard/CourseCard";
 import { CourseData } from "../../context/CourseContext";
 
-const Dashbord = () => {
+const Dashboard = () => {
   const { mycourse, user } = CourseData();
   const [view, setView] = useState("courses");
   const [scores, setScores] = useState([]);
@@ -20,25 +20,28 @@ const Dashbord = () => {
     try {
       setLoading(true);
 
-      const userId = localStorage.getItem("userId");
       const token = localStorage.getItem("token");
 
-      if (!userId || !token) {
-        throw new Error("User ID or token is missing");
+      if (!token) {
+        console.error("Token is missing");
+        return;
       }
 
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/results?userId=${userId}`,
+        `${import.meta.env.VITE_API_URL}/api/results`,
         {
           headers: {
-            token,
+            Authorization: `Bearer ${token}`,
           },
         }
       );
 
-      setScores(response.data.quizResults);
+      setScores(response.data.quizResults || []);
     } catch (error) {
-      console.error("Error fetching scores:", error);
+      console.error(
+        "Error fetching scores:",
+        error.response?.data?.message || error.message
+      );
     } finally {
       setLoading(false);
     }
@@ -49,17 +52,29 @@ const Dashbord = () => {
       <h2>Dashboard</h2>
 
       <div className="dashboard-buttons">
-        <button onClick={() => setView("courses")}>View Courses</button>
-        <button onClick={() => setView("scores")}>View Scores</button>
+        <button
+          className={view === "courses" ? "active" : ""}
+          onClick={() => setView("courses")}
+        >
+          View Courses
+        </button>
+
+        <button
+          className={view === "scores" ? "active" : ""}
+          onClick={() => setView("scores")}
+        >
+          View Scores
+        </button>
       </div>
 
       <div className="dashboard-content">
         {view === "courses" ? (
           <>
             <h3>All Enrolled Courses</h3>
+
             {mycourse && mycourse.length > 0 ? (
-              mycourse.map((e) => (
-                <CourseCard key={e._id} course={e} />
+              mycourse.map((course) => (
+                <CourseCard key={course._id} course={course} />
               ))
             ) : (
               <p>No courses enrolled yet</p>
@@ -68,11 +83,12 @@ const Dashbord = () => {
         ) : (
           <>
             <h3>Your Scores</h3>
+
             {loading ? (
               <p>Loading scores...</p>
             ) : scores.length > 0 ? (
-              scores.map((score, index) => (
-                <div key={index} className="score-item">
+              scores.map((score) => (
+                <div key={score._id} className="score-item">
                   <p>Quiz: {score.quizTitle}</p>
                   <p>
                     Score: {score.score}/{score.totalQuestions}
@@ -93,4 +109,4 @@ const Dashbord = () => {
   );
 };
 
-export default Dashbord;
+export default Dashboard;

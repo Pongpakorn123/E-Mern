@@ -5,36 +5,39 @@ const schema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
+      trim: true,
     },
+
     email: {
       type: String,
       required: true,
       unique: true,
+      lowercase: true,
+      trim: true,
     },
+
     password: {
       type: String,
       required: true,
+      minlength: 6,
     },
+
     role: {
       type: String,
+      enum: ["user", "admin", "superadmin"],
       default: "user",
     },
-    mainrole: {
-      type: String,
-      default: "user",
+
+    resetPasswordExpire: {
+      type: Date,
+      default: null,
     },
-    // subscription: [
-    //   {
-    //     type: mongoose.Schema.Types.ObjectId,
-    //     ref: "Courses",
-    //   },
-    // ],
-    resetPasswordExpire: Date,
   },
   {
     timestamps: true,
   }
 );
 
-export const User = mongoose.model("User", schema);
+schema.index({ email: 1 });
 
+export const User = mongoose.model("User", schema);

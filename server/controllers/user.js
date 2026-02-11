@@ -4,10 +4,12 @@ import jwt from "jsonwebtoken";
 import sendMail, { sendForgotMail } from "../middlewares/sendMail.js";
 import TryCatch from "../middlewares/TryCatch.js";
 
+/* =========================
+   REGISTER
+========================= */
 export const register = TryCatch(async (req, res) => {
   const { email, name, password } = req.body;
 
-  // Validate required fields
   if (!email || !name || !password) {
     return res.status(400).json({
       message: "Please provide email, name, and password",
@@ -16,24 +18,25 @@ export const register = TryCatch(async (req, res) => {
 
   let user = await User.findOne({ email });
 
-  if (user)
+  if (user) {
     return res.status(400).json({
-      message: "User Already exists",
+      message: "User already exists",
     });
+  }
 
   const hashPassword = await bcrypt.hash(password, 10);
 
-  user = {
+  const tempUser = {
     name,
     email,
     password: hashPassword,
   };
 
-  const otp = Math.floor(Math.random() * 1000000);
+  const otp = Math.floor(100000 + Math.random() * 900000);
 
   const activationToken = jwt.sign(
     {
-      user,
+      user: tempUser,
       otp,
     },
     process.env.Activation_Secret,
@@ -42,123 +45,177 @@ export const register = TryCatch(async (req, res) => {
     }
   );
 
-  const data = {
-    name,
-    otp,
-  };
+  const data = { name, otp };
 
   try {
-    await sendMail(email, "E learning", data);
-  } catch (emailError) {
-    console.error("Email sending failed:", emailError);
+    await sendMail(email, "E-Learning OTP Verification", data);
+  } catch (error) {
     return res.status(500).json({
-      message: "Failed to send OTP email. Please check your email configuration.",
-      error: emailError.message,
+      message: "Failed to send OTP email",
+      error: error.message,
     });
   }
 
   res.status(200).json({
-    message: "Otp sent to your mail",
+    message: "OTP sent to your email",
     activationToken,
   });
 });
 
+/* =========================
+   VERIFY USER
+========================= */
 export const verifyUser = TryCatch(async (req, res) => {
   const { otp, activationToken } = req.body;
 
-  const verify = jwt.verify(activationToken, process.env.Activation_Secret);
+  const verify = jwt.verify(
+    activationToken,
+    process.env.Activation_Secret
+  );
 
-  if (!verify)
+  if (!verify) {
     return res.status(400).json({
-      message: "Otp Expired",
+      message: "OTP Expired",
     });
+  }
 
-  if (verify.otp !== otp)
+  if (verify.otp !== Number(otp)) {
     return res.status(400).json({
-      message: "Wrong Otp",
+      message: "Wrong OTP",
     });
+  }
 
   await User.create({
     name: verify.user.name,
     email: verify.user.email,
     password: verify.user.password,
+    role: "user", // default role
   });
 
   res.json({
-    message: "User Registered",
+    message: "User Registered Successfully",
   });
 });
 
+/* =========================
+   LOGIN
+========================= */
 export const loginUser = TryCatch(async (req, res) => {
   const { email, password } = req.body;
 
   const user = await User.findOne({ email });
 
-  if (!user)
+  if (!user) {
     return res.status(400).json({
-      message: "No User with this email",
+      message: "No user with this email",
     });
+  }
 
-  const mathPassword = await bcrypt.compare(password, user.password);
+  const matchPassword = await bcrypt.compare(password, user.password);
 
-  if (!mathPassword)
+  if (!matchPassword) {
     return res.status(400).json({
-      message: "Wrong Password",
+      message: "Wrong password",
     });
+  }
 
-  // เพิ่ม role ของผู้ใช้ใน Token
-  const token = jwt.sign({ _id: user._id, role: user.role }, process.env.Jwt_Sec, {
-    expiresIn: "15d",
-  });
+  // ✅ include role in token
+  const token = jwt.sign(
+    { _id: user._id, role: user.role },
+    process.env.Jwt_Sec,
+    { expiresIn: "15d" }
+  );
 
   res.json({
     message: `Welcome back ${user.name}`,
     token,
-    user, // อาจจะปรับให้ส่งเฉพาะข้อมูลที่ต้องการ
+    user: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    },
   });
 });
 
+/* =========================
+   MY PROFILE
+========================= */
 export const myProfile = TryCatch(async (req, res) => {
-  const user = await User.findById(req.user._id);
+  const user = await User.findById(req.user._id).select("-password");
+
   res.json({ user });
 });
 
-// ฟังก์ชันสำหรับลืมรหัสผ่านและรีเซ็ต
+/* =========================
+   FORGOT PASSWORD
+========================= */
 export const forgotPassword = TryCatch(async (req, res) => {
   const { email } = req.body;
-  const user = await User.findOne({ email });
-  if (!user)
-    return res.status(404).json({ message: "No User with this email" });
 
-  const token = jwt.sign({ email }, process.env.Forgot_Secret);
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    return res.status(404).json({
+      message: "No user with this email",
+    });
+  }
+
+  const token = jwt.sign(
+    { email },
+    process.env.Forgot_Secret,
+    { expiresIn: "5m" }
+  );
+
   const data = { email, token };
-  await sendForgotMail("E learning", data);
+
+  await sendForgotMail("E-Learning Reset Password", data);
 
   user.resetPasswordExpire = Date.now() + 5 * 60 * 1000;
   await user.save();
 
   res.json({
-    message: "Reset Password Link is sent to your email",
+    message: "Reset password link sent to your email",
   });
 });
 
+/* =========================
+   RESET PASSWORD
+========================= */
 export const resetPassword = TryCatch(async (req, res) => {
-  const decodedData = jwt.verify(req.query.token, process.env.Forgot_Secret);
+  const decodedData = jwt.verify(
+    req.query.token,
+    process.env.Forgot_Secret
+  );
+
   const user = await User.findOne({ email: decodedData.email });
 
-  if (!user) return res.status(404).json({ message: "No user with this email" });
-
-  if (user.resetPasswordExpire === null)
-    return res.status(400).json({ message: "Token Expired" });
-
-  if (user.resetPasswordExpire < Date.now()) {
-    return res.status(400).json({ message: "Token Expired" });
+  if (!user) {
+    return res.status(404).json({
+      message: "No user with this email",
+    });
   }
 
-  const password = await bcrypt.hash(req.body.password, 10);
-  user.password = password;
+  if (!user.resetPasswordExpire) {
+    return res.status(400).json({
+      message: "Token expired",
+    });
+  }
+
+  if (user.resetPasswordExpire < Date.now()) {
+    return res.status(400).json({
+      message: "Token expired",
+    });
+  }
+
+  const hashedPassword = await bcrypt.hash(req.body.password, 10);
+
+  user.password = hashedPassword;
   user.resetPasswordExpire = null;
+
   await user.save();
 
-  res.json({ message: "Password Reset" });
+  res.json({
+    message: "Password reset successful",
+  });
 });
