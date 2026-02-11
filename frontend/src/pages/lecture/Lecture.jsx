@@ -257,25 +257,24 @@ const Lecture = ({ user }) => {
                 placeholder="Description"
                 required
               />
-             <input
-  type="file"
-  accept="video/*"
-  required
-  onChange={(e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+              <input
+                type="file"
+                accept="video/*"
+                required
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (!file) return;
 
-    const maxSize = 500 * 1024 * 1024; // 100MB
+                  const maxSize = 500 * 1024 * 1024; // 100MB
 
-    if (file.size > maxSize) {
-      toast.error("File too large! Maximum size is 100MB");
-      return;
-    }
-
-    setVideo(file);
-    setVideoPrev(URL.createObjectURL(file));
-  }}
-/>
+                  if (file.size > maxSize) {
+                    toast.error("File too large! Maximum size is 100MB");
+                    return;
+                  }
+                  setVideo(file);
+                  setVideoPrev(URL.createObjectURL(file));
+                }}
+              />
               {videoPrev && <video src={videoPrev} width={250} controls />}
               <button disabled={btnLoading} className="common-btn">
                 {btnLoading ? "Uploading..." : "Add"}
@@ -287,9 +286,8 @@ const Lecture = ({ user }) => {
             lectures.map((lec, i) => (
               <div key={lec._id}>
                 <div
-                  className={`lecture-number ${
-                    lecture?._id === lec._id ? "active" : ""
-                  }`}
+                  className={`lecture-number ${lecture?._id === lec._id ? "active" : ""
+                    }`}
                   onClick={() => fetchLecture(lec._id)}
                 >
                   {i + 1}. {lec.title}
