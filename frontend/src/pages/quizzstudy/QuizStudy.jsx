@@ -28,7 +28,7 @@ const QuizStudy = ({ user }) => {
         `${import.meta.env.VITE_API_URL}/api/quizzes/${id}`,
         {
           headers: {
-           Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         }
       );
@@ -56,40 +56,39 @@ const QuizStudy = ({ user }) => {
     setCurrentQuestionIndex((prev) => prev + 1);
   };
 
- const handleSubmitQuiz = async () => {
-  try {
-    const answersWithIds = quiz.questions.map((question, index) => ({
-      questionId: question._id,
-      selectedOption: answers[index],
-    }));
+  const handleSubmitQuiz = async () => {
+    try {
+      const answersWithIds = quiz.questions.map((question, index) => ({
+        questionId: question._id,
+        selectedOption: answers[index],
+      }));
 
-    const response = await axios.post(
-      `${import.meta.env.VITE_API_URL}/api/quizzes/submit/${quiz._id}`,
-      {
-        answers: answersWithIds,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/quizzes/submit/${quiz._id}`,
+        {
+          answers: answersWithIds,
         },
-      }
-    );
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
 
-    const resultScore = response.data.score;
+      const resultScore = response.data.score;
 
-    const incorrectQuestions = quiz.questions.filter(
-      (q, index) => answers[index] !== q.correctOption
-    );
+      const incorrectQuestions = quiz.questions.filter(
+        (q, index) => answers[index] !== q.correctOption
+      );
 
-    setScore(resultScore);
-    setWrongQuestions(incorrectQuestions);
-    setShowResult(true);
-  } catch (error) {
-    console.error("Submit quiz error:", error);
-  }
-};
-
-
+      setScore(resultScore);
+      setWrongQuestions(incorrectQuestions);
+      setShowResult(true);
+    } catch (error) {
+      console.error("Submit quiz error:", error);
+    }
+  };
+  
   useEffect(() => {
     fetchQuiz();
   }, [id]);
