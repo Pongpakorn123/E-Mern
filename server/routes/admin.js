@@ -13,67 +13,21 @@ import { uploadImage, uploadVideo } from "../middlewares/multer.js";
 
 const router = express.Router();
 
-/* =========================
-   COURSE
-========================= */
+/* COURSE */
+router.post("/course/new", isAuth, isAdmin, uploadImage, createCourse);
 
-router.post(
-  "/course/new",
-  isAuth,
-  isAdmin,
-  uploadImage,
-  createCourse
-);
+/* LECTURE */
+router.post("/course/:id", isAuth, isAdmin, uploadVideo, addLectures);
 
-/* =========================
-   LECTURE
-========================= */
+router.delete("/course/:id", isAuth, isAdmin, deleteCourse);
 
-router.post(
-  "/course/:id",
-  isAuth,
-  isAdmin,
-  uploadVideo,
-  addLectures
-);
+router.delete("/lecture/:id", isAuth, isAdmin, deleteLecture);
 
-router.delete(
-  "/course/:id",
-  isAuth,
-  isAdmin,
-  deleteCourse
-);
+/* ADMIN PANEL */
+router.get("/stats", isAuth, isAdmin, getAllStats);
 
-router.delete(
-  "/lecture/:id",
-  isAuth,
-  isAdmin,
-  deleteLecture
-);
+router.get("/users", isAuth, isAdmin, getAllUser);
 
-/* =========================
-   ADMIN PANEL
-========================= */
-
-router.get(
-  "/stats",
-  isAuth,
-  isAdmin,
-  getAllStats
-);
-
-router.get(
-  "/users",
-  isAuth,
-  isAdmin,
-  getAllUser
-);
-
-router.put(
-  "/user/:id",
-  isAuth,
-  isSuperAdmin,
-  updateRole
-);
+router.put("/user/:id", isAuth, isSuperAdmin, updateRole);
 
 export default router;

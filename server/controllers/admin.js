@@ -5,9 +5,7 @@ import { Courses } from "../models/Courses.js";
 import { Lecture } from "../models/Lecture.js";
 import { User } from "../models/User.js";
 
-/* =========================
-   HELPER: UPLOAD BUFFER
-========================= */
+/* ================= UPLOAD BUFFER ================= */
 const uploadFromBuffer = (buffer, options = {}) => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
@@ -51,9 +49,7 @@ export const createCourse = TryCatch(async (req, res) => {
   });
 });
 
-/* =========================
-   ADD LECTURE (VIDEO)
-========================= */
+/* ================= ADD LECTURE ================= */
 export const addLectures = TryCatch(async (req, res) => {
   const course = await Courses.findById(req.params.id);
 
