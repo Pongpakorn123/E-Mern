@@ -28,7 +28,7 @@ const QuizStudy = ({ user }) => {
         `${import.meta.env.VITE_API_URL}/api/quizzes/${id}`,
         {
           headers: {
-            token: localStorage.getItem("token"),
+           Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         }
       );

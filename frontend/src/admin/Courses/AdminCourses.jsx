@@ -60,9 +60,9 @@ const AdminCourses = ({ user }) => {
     myForm.append("file", image);
 
     try {
-      const { data } = await axios.post(`${server}/api/course/new`, myForm, {
+      const { data } = await axios.post(`${server}/api/admin/course/new`, myForm, {
         headers: {
-          token: localStorage.getItem("token"),
+         Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
 

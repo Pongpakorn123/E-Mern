@@ -17,7 +17,7 @@ const AdminUsers = ({ user }) => {
     try {
       const { data } = await axios.get(`${server}/api/users`, {
         headers: {
-          token: localStorage.getItem("token"),
+         Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
 
@@ -39,7 +39,7 @@ const AdminUsers = ({ user }) => {
           {},
           {
             headers: {
-              token: localStorage.getItem("token"),
+             Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
           }
         );

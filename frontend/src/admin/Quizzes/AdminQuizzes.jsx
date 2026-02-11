@@ -9,20 +9,30 @@ import "./adminQuizzes.css";
 const AdminCreateQuiz = ({ user }) => {
   const navigate = useNavigate();
 
-  if (user && user.role !== "admin") return navigate("/");
+  // ✅ allow admin + superadmin
+  if (
+    user &&
+    user.role !== "admin" &&
+    user.role !== "superadmin"
+  ) {
+    return navigate("/");
+  }
 
   const [title, setTitle] = useState("");
-  const [questions, setQuestions] = useState([{ question: "", options: ["", "", "", ""], correctOption: "" }]);
+  const [questions, setQuestions] = useState([
+    { question: "", options: ["", "", "", ""], correctOption: "" },
+  ]);
   const [btnLoading, setBtnLoading] = useState(false);
   const [quizzes, setQuizzes] = useState([]);
 
-  // Fetch existing quizzes
+  /* ================= FETCH QUIZZES ================= */
+
   useEffect(() => {
     const fetchQuizzes = async () => {
       try {
         const { data } = await axios.get(`${server}/api/quizzes`, {
           headers: {
-            token: localStorage.getItem("token"),
+           Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         });
         setQuizzes(data.quizzes);
@@ -34,77 +44,99 @@ const AdminCreateQuiz = ({ user }) => {
     fetchQuizzes();
   }, []);
 
+  /* ================= FORM HANDLERS ================= */
+
   const handleAddQuestion = () => {
-    setQuestions([...questions, { question: "", options: ["", "", "", ""], correctOption: "" }]);
+    setQuestions([
+      ...questions,
+      { question: "", options: ["", "", "", ""], correctOption: "" },
+    ]);
   };
 
   const handleChangeQuestion = (index, value) => {
-    const newQuestions = [...questions];
-    newQuestions[index].question = value;
-    setQuestions(newQuestions);
+    const updated = [...questions];
+    updated[index].question = value;
+    setQuestions(updated);
   };
 
   const handleChangeOption = (qIndex, optIndex, value) => {
-    const newQuestions = [...questions];
-    newQuestions[qIndex].options[optIndex] = value;
-    setQuestions(newQuestions);
+    const updated = [...questions];
+    updated[qIndex].options[optIndex] = value;
+    setQuestions(updated);
   };
 
   const handleChangeCorrectOption = (qIndex, value) => {
-    const newQuestions = [...questions];
-    newQuestions[qIndex].correctOption = value;
-    setQuestions(newQuestions);
+    const updated = [...questions];
+    updated[qIndex].correctOption = value;
+    setQuestions(updated);
   };
+
+  /* ================= CREATE QUIZ ================= */
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setBtnLoading(true);
 
     try {
-      const { data } = await axios.post(`${server}/api/quizzes/new`, { title, questions }, {
-        headers: {
-          token: localStorage.getItem("token"),
-        },
-      });
+      const { data } = await axios.post(
+        `${server}/api/quizzes/new`,
+        { title, questions },
+        {
+          headers: {
+           Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
 
       toast.success(data.message);
       setTitle("");
-      setQuestions([{ question: "", options: ["", "", "", ""], correctOption: "" }]);
-      setBtnLoading(false);
-      setQuizzes([...quizzes, data.quiz]); // เพิ่ม quiz ใหม่ใน state
+      setQuestions([
+        { question: "", options: ["", "", "", ""], correctOption: "" },
+      ]);
+      setQuizzes([...quizzes, data.quiz]);
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(
+        error.response?.data?.message || "Failed to create quiz"
+      );
+    } finally {
       setBtnLoading(false);
     }
   };
 
-  // Delete quiz
+  /* ================= DELETE QUIZ ================= */
+
   const handleDeleteQuiz = async (quizId) => {
     try {
-      const { data } = await axios.delete(`${server}/api/quizzes/${quizId}`, {
-        headers: {
-          token: localStorage.getItem("token"),
-        },
-      });
+      const { data } = await axios.delete(
+        `${server}/api/quizzes/${quizId}`,
+        {
+          headers: {
+           Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
       toast.success(data.message);
-      setQuizzes(quizzes.filter((quiz) => quiz._id !== quizId)); // ลบ quiz ออกจาก state
+      setQuizzes(quizzes.filter((q) => q._id !== quizId));
     } catch (error) {
-      toast.error("Failed to delete quiz");
+      toast.error(
+        error.response?.data?.message || "Failed to delete quiz"
+      );
     }
   };
 
   return (
     <Layout>
       <div className="admin-courses">
-        {/* เพิ่มคอนเทนเนอร์ที่ครอบทั้งสองส่วน */}
         <div className="content-container">
+
           <div className="existing-quizzes">
             <h2>Existing Quizzes</h2>
             <ul>
               {quizzes.map((quiz) => (
-                <li key={quiz._id} style={{ display: "flex", alignItems: "center" }}>
-                  <button 
-                    onClick={() => handleDeleteQuiz(quiz._id)} 
+                <li key={quiz._id}>
+                  <button
+                    onClick={() => handleDeleteQuiz(quiz._id)}
                     style={{ marginRight: "10px" }}
                   >
                     Delete
@@ -118,8 +150,9 @@ const AdminCreateQuiz = ({ user }) => {
           <div className="add-course">
             <div className="course-form">
               <h2>Add Quiz</h2>
+
               <form onSubmit={handleSubmit}>
-                <label htmlFor="text">Quiz Title</label>
+                <label>Quiz Title</label>
                 <input
                   type="text"
                   value={title}
@@ -129,29 +162,44 @@ const AdminCreateQuiz = ({ user }) => {
 
                 {questions.map((q, qIndex) => (
                   <div key={qIndex}>
-                    <label htmlFor={`question-${qIndex}`}>Question {qIndex + 1}</label>
+                    <label>Question {qIndex + 1}</label>
                     <input
                       type="text"
                       value={q.question}
-                      onChange={(e) => handleChangeQuestion(qIndex, e.target.value)}
+                      onChange={(e) =>
+                        handleChangeQuestion(qIndex, e.target.value)
+                      }
                       required
                     />
+
                     {q.options.map((opt, optIndex) => (
                       <div key={optIndex}>
-                        <label htmlFor={`option-${qIndex}-${optIndex}`}>Option {optIndex + 1}</label>
+                        <label>Option {optIndex + 1}</label>
                         <input
                           type="text"
                           value={opt}
-                          onChange={(e) => handleChangeOption(qIndex, optIndex, e.target.value)}
+                          onChange={(e) =>
+                            handleChangeOption(
+                              qIndex,
+                              optIndex,
+                              e.target.value
+                            )
+                          }
                           required
                         />
                       </div>
                     ))}
-                    <label htmlFor={`correctOption-${qIndex}`}>Correct Option</label>
+
+                    <label>Correct Option</label>
                     <input
                       type="text"
                       value={q.correctOption}
-                      onChange={(e) => handleChangeCorrectOption(qIndex, e.target.value)}
+                      onChange={(e) =>
+                        handleChangeCorrectOption(
+                          qIndex,
+                          e.target.value
+                        )
+                      }
                       required
                     />
                   </div>
@@ -171,6 +219,7 @@ const AdminCreateQuiz = ({ user }) => {
               </form>
             </div>
           </div>
+
         </div>
       </div>
     </Layout>

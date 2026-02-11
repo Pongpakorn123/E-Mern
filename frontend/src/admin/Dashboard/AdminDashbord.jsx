@@ -26,7 +26,7 @@ const AdminDashbord = ({ user }) => {
         `${server}/api/admin/stats`,
         {
           headers: {
-            token: localStorage.getItem("token"),
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         }
       );
