@@ -88,7 +88,8 @@ const QuizStudy = ({ user }) => {
       console.error("Submit quiz error:", error);
     }
   };
-  
+
+
   useEffect(() => {
     fetchQuiz();
   }, [id]);
