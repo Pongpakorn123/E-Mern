@@ -257,17 +257,25 @@ const Lecture = ({ user }) => {
                 placeholder="Description"
                 required
               />
-              <input
-                type="file"
-                accept="video/*"
-                required
-                onChange={(e) => {
-                  const file = e.target.files[0];
-                  if (!file) return;
-                  setVideo(file);
-                  setVideoPrev(URL.createObjectURL(file));
-                }}
-              />
+             <input
+  type="file"
+  accept="video/*"
+  required
+  onChange={(e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const maxSize = 500 * 1024 * 1024; // 100MB
+
+    if (file.size > maxSize) {
+      toast.error("File too large! Maximum size is 100MB");
+      return;
+    }
+
+    setVideo(file);
+    setVideoPrev(URL.createObjectURL(file));
+  }}
+/>
               {videoPrev && <video src={videoPrev} width={250} controls />}
               <button disabled={btnLoading} className="common-btn">
                 {btnLoading ? "Uploading..." : "Add"}
