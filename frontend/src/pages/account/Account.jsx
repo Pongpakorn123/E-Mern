@@ -42,15 +42,13 @@ const Account = ({ user }) => {
 
             <br />
 
-            {user.role === "admin" && (
-              <button
-                onClick={() => navigate(`/admin/dashboard`)}
-                className="common-btn"
-              >
+            {["admin", "superadmin"].includes(user.role?.toLowerCase()) && (
+              <button onClick={() => navigate(`/admin/dashboard`)} className="common-btn">
                 <MdDashboard />
                 Admin Dashboard
               </button>
             )}
+
 
             <br />
 

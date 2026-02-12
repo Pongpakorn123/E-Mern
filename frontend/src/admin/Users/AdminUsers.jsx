@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import "./users.css";
+import "./adminUsers.css";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { server } from "../../main";
@@ -8,86 +8,107 @@ import toast from "react-hot-toast";
 
 const AdminUsers = ({ user }) => {
   const navigate = useNavigate();
-
-  if (user && user.mainrole !== "superadmin") return navigate("/");
-
   const [users, setUsers] = useState([]);
 
-  async function fetchUsers() {
+  useEffect(() => {
+    if (!user) return;
+
+    if (user.role !== "superadmin") {
+      navigate("/");
+      return;
+    }
+
+    fetchUsers();
+  }, [user]);
+
+  const fetchUsers = async () => {
     try {
-      const { data } = await axios.get(`${server}/api/users`, {
-        headers: {
-         Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      const { data } = await axios.get(
+        `${server}/api/admin/users`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
 
       setUsers(data.users);
     } catch (error) {
-      console.log(error);
-    }
-  }
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const updateRole = async (id) => {
-    if (confirm("are you sure you want to update this user role")) {
-      try {
-        const { data } = await axios.put(
-          `${server}/api/user/${id}`,
-          {},
-          {
-            headers: {
-             Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
-
-        toast.success(data.message);
-        fetchUsers();
-      } catch (error) {
-        toast.error(error.response.data.message);
-      }
+      toast.error("Failed to fetch users");
     }
   };
 
-  console.log(users);
+  const updateRole = async (id) => {
+    if (!window.confirm("Are you sure you want to update this user role?"))
+      return;
+
+    try {
+      const { data } = await axios.put(
+        `${server}/api/admin/user/${id}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      toast.success(data.message);
+      fetchUsers();
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Failed to update role"
+      );
+    }
+  };
+
+  if (!user || user.role !== "superadmin") return null;
+
   return (
     <Layout>
-      <div className="users">
-        <h1>All Users</h1>
-        <table border={"black"}>
-          <thead>
-            <tr>
-              <td>#</td>
-              <td>name</td>
-              <td>email</td>
-              <td>role</td>
-              <td>update role</td>
-            </tr>
-          </thead>
+      <div className="users-container">
+        <h1 className="users-title">User Management</h1>
 
-          {users &&
-            users.map((e, i) => (
-              <tbody>
-                <tr>
+        <div className="users-card">
+          <table className="users-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {users.map((e, i) => (
+                <tr key={e._id}>
                   <td>{i + 1}</td>
                   <td>{e.name}</td>
                   <td>{e.email}</td>
-                  <td>{e.role}</td>
                   <td>
-                    <button
-                      onClick={() => updateRole(e._id)}
-                      className="common-btn"
+                    <span
+                      className={`role-badge ${e.role}`}
                     >
-                      Update Role
-                    </button>
+                      {e.role}
+                    </span>
+                  </td>
+                  <td>
+                    {e.role !== "superadmin" && (
+                      <button
+                        onClick={() => updateRole(e._id)}
+                        className="update-btn"
+                      >
+                        Update Role
+                      </button>
+                    )}
                   </td>
                 </tr>
-              </tbody>
-            ))}
-        </table>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </Layout>
   );
