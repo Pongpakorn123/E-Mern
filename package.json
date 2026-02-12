@@ -1,6 +1,12 @@
 {
   "dependencies": {
-    "mongodb": "^6.9.0"
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.2.4",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongodb": "^6.9.0",
+    "mongoose": "^9.2.1",
+    "nodemailer": "^8.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.7.5"

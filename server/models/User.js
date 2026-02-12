@@ -32,12 +32,27 @@ const schema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+
+    // สำหรับ OTP verification
+    otp: {
+      type: String,
+    },
+
+    otpExpiry: {
+      type: Date,
+    },
+
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
   }
 );
 
+// สร้าง index email
 schema.index({ email: 1 });
 
 export const User = mongoose.model("User", schema);

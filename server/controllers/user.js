@@ -1,221 +1,111 @@
 import { User } from "../models/User.js";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import sendMail, { sendForgotMail } from "../middlewares/sendMail.js";
+import { sendOtpMail, sendForgotMail } from "../middlewares/sendMail.js";
 import TryCatch from "../middlewares/TryCatch.js";
 
-/* =========================
-   REGISTER
-========================= */
+// REGISTER
 export const register = TryCatch(async (req, res) => {
   const { email, name, password } = req.body;
+  if (!email || !name || !password)
+    return res.status(400).json({ message: "Provide email, name, password" });
 
-  if (!email || !name || !password) {
-    return res.status(400).json({
-      message: "Please provide email, name, and password",
-    });
-  }
+  const existingUser = await User.findOne({ email });
+  if (existingUser) return res.status(400).json({ message: "User exists" });
 
-  let user = await User.findOne({ email });
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-  if (user) {
-    return res.status(400).json({
-      message: "User already exists",
-    });
-  }
-
-  const hashPassword = await bcrypt.hash(password, 10);
-
-  const tempUser = {
-    name,
-    email,
-    password: hashPassword,
-  };
-
-  const otp = Math.floor(100000 + Math.random() * 900000);
-
-  const activationToken = jwt.sign(
-    {
-      user: tempUser,
-      otp,
-    },
-    process.env.Activation_Secret,
-    {
-      expiresIn: "5m",
-    }
-  );
-
-  const data = { name, otp };
+  const tempUser = { name, email, password: hashedPassword };
+  const activationToken = jwt.sign({ user: tempUser, otp }, process.env.Activation_Secret, { expiresIn: "5m" });
 
   try {
-    await sendMail(email, "E-Learning OTP Verification", data);
+    await sendOtpMail(email, name, otp);
+    res.status(200).json({ message: "OTP sent to your email", activationToken });
   } catch (error) {
-    return res.status(500).json({
-      message: "Failed to send OTP email",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Failed to send OTP", error: error.message });
   }
-
-  res.status(200).json({
-    message: "OTP sent to your email",
-    activationToken,
-  });
 });
 
-/* =========================
-   VERIFY USER
-========================= */
+// VERIFY OTP
 export const verifyUser = TryCatch(async (req, res) => {
   const { otp, activationToken } = req.body;
+  if (!otp || !activationToken)
+    return res.status(400).json({ message: "OTP or token missing" });
 
-  const verify = jwt.verify(
-    activationToken,
-    process.env.Activation_Secret
-  );
+  const decoded = jwt.verify(activationToken, process.env.Activation_Secret);
+  if (!decoded) return res.status(400).json({ message: "OTP expired" });
 
-  if (!verify) {
-    return res.status(400).json({
-      message: "OTP Expired",
-    });
-  }
+  if (decoded.otp !== otp.toString())
+    return res.status(400).json({ message: "Wrong OTP" });
 
-  if (verify.otp !== Number(otp)) {
-    return res.status(400).json({
-      message: "Wrong OTP",
-    });
-  }
-
-  await User.create({
-    name: verify.user.name,
-    email: verify.user.email,
-    password: verify.user.password,
-    role: "user", // default role
-  });
-
-  res.json({
-    message: "User Registered Successfully",
-  });
+  await User.create({ ...decoded.user, role: "user" });
+  res.json({ message: "User Registered Successfully" });
 });
 
-/* =========================
-   LOGIN
-========================= */
+// LOGIN
 export const loginUser = TryCatch(async (req, res) => {
   const { email, password } = req.body;
-
   const user = await User.findOne({ email });
+  if (!user) return res.status(400).json({ message: "No user with this email" });
 
-  if (!user) {
-    return res.status(400).json({
-      message: "No user with this email",
-    });
-  }
+  const match = await bcrypt.compare(password, user.password);
+  if (!match) return res.status(400).json({ message: "Wrong password" });
 
-  const matchPassword = await bcrypt.compare(password, user.password);
-
-  if (!matchPassword) {
-    return res.status(400).json({
-      message: "Wrong password",
-    });
-  }
-
-  // ✅ include role in token
-  const token = jwt.sign(
-    { _id: user._id, role: user.role },
-    process.env.Jwt_Sec,
-    { expiresIn: "15d" }
-  );
+  const token = jwt.sign({ _id: user._id, role: user.role }, process.env.Jwt_Sec, { expiresIn: "15d" });
 
   res.json({
     message: `Welcome back ${user.name}`,
     token,
-    user: {
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    },
+    user: { _id: user._id, name: user.name, email: user.email, role: user.role }
   });
 });
 
-/* =========================
-   MY PROFILE
-========================= */
+// FORGOT PASSWORD
+export const forgotPassword = TryCatch(async (req, res) => {
+  const { email } = req.body;
+  const user = await User.findOne({ email });
+  if (!user) return res.status(404).json({ message: "No user with this email" });
+
+  const token = jwt.sign({ email }, process.env.Forgot_Secret, { expiresIn: "5m" });
+
+  try {
+    const resetLink = `${process.env.CLIENT_URL || "http://localhost:5173"}/reset-password/${token}`;
+    await sendForgotMail("Reset Password", { email, resetLink });
+
+    user.resetPasswordExpire = Date.now() + 5 * 60 * 1000;
+    await user.save();
+
+    res.json({ message: "Reset password link sent to your email" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to send reset email", error: error.message });
+  }
+});
+
+// MY PROFILE
 export const myProfile = TryCatch(async (req, res) => {
   const user = await User.findById(req.user._id).select("-password");
-
   res.json({ user });
 });
 
-/* =========================
-   FORGOT PASSWORD
-========================= */
-export const forgotPassword = TryCatch(async (req, res) => {
-  const { email } = req.body;
-
-  const user = await User.findOne({ email });
-
-  if (!user) {
-    return res.status(404).json({
-      message: "No user with this email",
-    });
-  }
-
-  const token = jwt.sign(
-    { email },
-    process.env.Forgot_Secret,
-    { expiresIn: "5m" }
-  );
-
-  const data = { email, token };
-
-  await sendForgotMail("E-Learning Reset Password", data);
-
-  user.resetPasswordExpire = Date.now() + 5 * 60 * 1000;
-  await user.save();
-
-  res.json({
-    message: "Reset password link sent to your email",
-  });
-});
-
-/* =========================
-   RESET PASSWORD
-========================= */
+// RESET PASSWORD
 export const resetPassword = TryCatch(async (req, res) => {
-  const decodedData = jwt.verify(
-    req.query.token,
-    process.env.Forgot_Secret
-  );
-
-  const user = await User.findOne({ email: decodedData.email });
-
-  if (!user) {
-    return res.status(404).json({
-      message: "No user with this email",
-    });
+  let decoded;
+  try {
+    decoded = jwt.verify(req.query.token, process.env.Forgot_Secret);
+  } catch (err) {
+    return res.status(400).json({ message: "Invalid or expired token" });
   }
 
-  if (!user.resetPasswordExpire) {
-    return res.status(400).json({
-      message: "Token expired",
-    });
-  }
+  const user = await User.findOne({ email: decoded.email });
+  if (!user) return res.status(404).json({ message: "No user with this email" });
 
-  if (user.resetPasswordExpire < Date.now()) {
-    return res.status(400).json({
-      message: "Token expired",
-    });
-  }
+  if (!user.resetPasswordExpire || user.resetPasswordExpire < Date.now())
+    return res.status(400).json({ message: "Token expired" });
 
-  const hashedPassword = await bcrypt.hash(req.body.password, 10);
-
-  user.password = hashedPassword;
+  user.password = await bcrypt.hash(req.body.password, 10);
   user.resetPasswordExpire = null;
-
   await user.save();
 
-  res.json({
-    message: "Password reset successful",
-  });
+  res.json({ message: "Password reset successful" });
 });
