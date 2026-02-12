@@ -8,3 +8,4 @@ const router = express.Router();
 router.get('/admin/results', isAuthenticated, isAdmin, getAdminQuizResults);
 
 export default router;
+

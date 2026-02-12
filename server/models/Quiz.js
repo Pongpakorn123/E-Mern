@@ -26,3 +26,4 @@ function arrayLimit(val) {
 }
 
 export default mongoose.model('Quiz', quizSchema);
+

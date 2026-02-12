@@ -31,3 +31,4 @@ router.get("/users", isAuth, isAdmin, getAllUser);
 router.put("/user/:id", isAuth, isSuperAdmin, updateRole);
 
 export default router;
+

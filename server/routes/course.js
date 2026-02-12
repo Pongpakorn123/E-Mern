@@ -22,3 +22,4 @@ router.get("/lecture/:id", fetchLecture);
 router.get("/mycourse", getMyCourses);
 
 export default router;
+

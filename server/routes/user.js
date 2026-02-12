@@ -22,3 +22,4 @@ router.post("/user/progress", isAuth, addProgress);
 router.get("/user/progress", isAuth, getYourProgress);
 
 export default router;
+

@@ -34,3 +34,4 @@ const schema = new mongoose.Schema({
 });
 
 export const Lecture = mongoose.model("Lecture", schema);
+

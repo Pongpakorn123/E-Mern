@@ -57,3 +57,4 @@ router.post("/submit/:quizId", isAuth, submitQuiz);
 router.delete("/:quizId", isAuth, isAdmin, deleteQuiz);
 
 export default router;
+

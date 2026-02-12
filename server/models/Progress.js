@@ -23,3 +23,4 @@ const schema = new mongoose.Schema(
 );
 
 export const Progress = mongoose.model("Progress", schema);
+

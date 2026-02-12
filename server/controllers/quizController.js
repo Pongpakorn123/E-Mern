@@ -110,3 +110,4 @@ export const submitQuiz = TryCatch(async (req, res) => {
     wrongQuestions,
   });
 });
+

@@ -201,3 +201,4 @@ export const updateRole = TryCatch(async (req, res) => {
     message: `Role updated to ${user.role}`,
   });
 });
+

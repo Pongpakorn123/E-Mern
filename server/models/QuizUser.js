@@ -42,3 +42,4 @@ const quizUserSchema = new mongoose.Schema({
 });
 
 export default mongoose.model('QuizUser', quizUserSchema);
+

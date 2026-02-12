@@ -52,3 +52,4 @@ export const sendForgotMail = async (subject, data) => {
     throw new Error("Failed to send forgot password email");
   }
 };
+
